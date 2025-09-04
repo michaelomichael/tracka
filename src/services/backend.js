@@ -1,38 +1,84 @@
-const backend = {
-  _data: {
-    lists: {
-      1000: {
-        id: '1000',
-        name: 'Backlog',
-        taskIds: ['1', '2'],
-      },
-      2000: {
-        id: '2000',
-        name: 'Done',
-        taskIds: ['3'],
-      },
+import { initializeApp } from 'firebase/app'
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+} from 'firebase/firestore'
+import credentials from '@/../firebaseCredentials.json'
+
+export const firebaseApp = initializeApp(credentials)
+
+// used for the firestore refs
+const db = getFirestore(firebaseApp)
+
+// here we can export reusable database references
+
+const tasksRef = collection(db, 'tasks')
+const listsRef = collection(db, 'lists')
+
+const defaultData = {
+  lists: {
+    1: {
+      id: '1',
+      name: 'Done',
+      taskIds: ['3000'],
     },
-    tasks: {
-      1: {
-        id: '1',
-        title: 'Default task #1',
-        description: 'Description of default task #1',
-        listId: '1000',
-      },
-      2: {
-        id: '2',
-        title: 'Default task #2',
-        description: 'Description of default task #2',
-        listId: '1000',
-      },
-      3: {
-        id: '3',
-        title: 'Default task #3',
-        description: 'Description of default task #3',
-        listId: '2000',
-      },
+    2: {
+      id: '2',
+      name: 'Backlog',
+      taskIds: ['1000', '2000'],
     },
   },
+  tasks: {
+    1000: {
+      id: '1000',
+      title: 'Default task #1',
+      description: 'Description of default task #1',
+      listId: '1000',
+      parentTaskId: null,
+      childTaskIds: [],
+    },
+    2000: {
+      id: '2000',
+      title: 'Default task #2',
+      description: 'Description of default task #2',
+      listId: '1',
+      parentTaskId: null,
+      childTaskIds: ['3000'],
+    },
+    3000: {
+      id: '3000',
+      title: 'Default task #3',
+      description: 'Description of default task #3',
+      listId: '2',
+      parentTaskId: '2000',
+      childTaskIds: [],
+    },
+  },
+}
+
+async function repopulateCollection(ref, typeName, items) {
+  const snapshot = await getDocs(ref)
+  const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, typeName, d.id)))
+  await Promise.all(deletions)
+
+  const writes = items.map((item) => setDoc(doc(db, typeName, item.id), item))
+  await Promise.all(writes)
+}
+
+export async function resetDb() {
+  repopulateCollection(tasksRef, 'tasks', Object.values(defaultData.tasks))
+  repopulateCollection(listsRef, 'lists', Object.values(defaultData.lists))
+}
+
+//await resetDb()
+
+const backend = {
+  _data: { lists: {}, tasks: {} }, // copy(defaultData),
   _callbacks: {},
   _fireCallbacks(entityType, modificationType, oldValue, newValue) {
     Object.entries(this._callbacks).forEach((callback) => {
@@ -70,7 +116,12 @@ const backend = {
     console.log('Deleted list', id, originalList)
     this._fireCallbacks('LIST', 'D', copy(originalList), null)
   },
-
+  async getAndWatchLists(containerObject) {
+    return await getAndWatchCollection(listsRef, containerObject)
+  },
+  async getAndWatchTasks(containerObject) {
+    return await getAndWatchCollection(tasksRef, containerObject)
+  },
   getTasks() {
     return copy(this._data.tasks)
   },
@@ -108,6 +159,66 @@ const backend = {
     return callbackId
   },
 }
+
+async function getAndWatchCollection(collectionRef, containerObject) {
+  const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const item = { id: change.doc.id, ...change.doc.data() }
+
+      if (change.type === 'added') {
+        console.log(`Firestore says: added document`, item.id, item)
+        containerObject[item.id] = item
+      }
+
+      if (change.type === 'modified') {
+        console.log('Firestore says: modified document', item.id, item)
+        containerObject[item.id] = item
+        // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
+      }
+
+      if (change.type === 'removed') {
+        console.log('Firestore says: deleted document', item.id, item)
+        delete containerObject[item.id]
+      }
+    })
+  })
+
+  return unsubscribe
+
+  //onUnmounted(() => {
+  //  unsubscribe() // stop listening when component is destroyed
+  //})
+}
+
+async function loadInitialTasksSnapshot() {
+  const unsubscribe = onSnapshot(tasksRef, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const taskData = { id: change.doc.id, ...change.doc.data() }
+
+      if (change.type === 'added') {
+        console.log('Firestore says: added document', taskData.id, taskData)
+        backend._data.tasks[taskData.id] = taskData
+      }
+
+      if (change.type === 'modified') {
+        console.log('Firestore says: modified document', taskData.id, taskData)
+        backend._data.tasks[taskData.id] = taskData
+        // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
+      }
+
+      if (change.type === 'removed') {
+        console.log('Firestore says: deleted document', taskData.id, taskData)
+        delete backend._data.tasks[taskData.id]
+      }
+    })
+  })
+
+  //onUnmounted(() => {
+  //  unsubscribe() // stop listening when component is destroyed
+  //})
+}
+
+await loadInitialTasksSnapshot()
 
 function copy(obj) {
   return JSON.parse(JSON.stringify(obj))

@@ -1,15 +1,16 @@
 <script setup>
 import backend from "@/services/backend"
-import { onMounted, reactive } from "vue";
+import { onMounted, onUnmounted, reactive } from "vue";
 import TaskList from "../components/TaskList.vue";
 
 const state = reactive({
-    lists: [],
+    listsById: {},
     isLoading: true,
 });
-onMounted(() => {
+onMounted(async () => {
     console.log("Backend is ", backend);
-    state.lists = backend.getLists();
+    onUnmounted(await backend.getAndWatchLists(state.listsById));
+    //state.lists = backend.getLists();
     console.log("Loaded lists", state.lists);
     state.isLoading = false;
 });
@@ -22,7 +23,7 @@ onMounted(() => {
 
             <section v-if="!state.isLoading">
                 <div class="flex ">
-                    <TaskList v-for="list in state.lists" :key="list.id" :list="list" />
+                    <TaskList v-for="list in Object.values(state.listsById)" :key="list.id" :list="list" />
                 </div>
 
             </section>
