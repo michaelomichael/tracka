@@ -1,12 +1,17 @@
 <script setup>
 import TaskCard from './TaskCard.vue';
+import { useBackendStore } from '../services/backendStore';
 
-defineProps({
-    list: {
-        type: Object,
+const backendStore = useBackendStore();
+
+const props = defineProps({
+    listId: {
+        type: String,
         required: true,
     },
 });
+
+const list = backendStore.listsById[props.listId]
 </script>
 
 <template>

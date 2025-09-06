@@ -1,49 +1,51 @@
 <script setup>
-import { onMounted, reactive } from 'vue';
-import backend from '../services/backend';
+import { useBackendStore } from '../services/backendStore';
 
+const backendStore = useBackendStore();
 
 const props = defineProps({
     id: String,
 });
 
-const state = reactive({
-    task: {},
-    parentTask: null,
-    childTasks: [],
-    isLoading: true,
-});
+const task = backendStore.tasksById[props.id]
+const parentTask = task.parentTaskId === null ? null : backendStore.tasksById[task.parentTaskId]
+const childTasks = task.childTaskIds
+    .map((childTaskId) => backendStore.tasksById[childTaskId])
+    .filter((childTask) => childTask !== null)
 
-onMounted(() => {
-    console.log("Loading task with id", props.id);
-    state.task = backend.getTask(props.id);
-
-    state.parentTask = state.task.parentTaskId ? backend.getTask(state.task.parentTaskId) : null;
-    state.childTasks = state.task.childTaskIds.map(childTaskId => backend.getTask(childTaskId));
-
-    state.isLoading = false;
-});
+const progressPercentage = Math.floor(
+    100 *
+    childTasks.filter(childTask => childTask.listId === '1').length /
+    childTasks.length
+)
 </script>
 
 <template>
     <section class="bg-gray-100 hover:bg-gray-200 rounded-md w-60 my-4 border-2 p-4">
-        <RouterLink v-if="!state.isLoading" :to="`/tasks/${id}/edit`">
-            <p v-if="state.parentTask !== null" class="text-xs mb-2">
-                <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
+        <RouterLink :to="`/tasks/${id}/edit`">
+            <p v-if="parentTask !== null" class="text-xs mb-2">
+                <RouterLink :to="`/tasks/${parentTask.id}/edit`"
                     class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2">
-                    Parent: {{ state.parentTask.title }}
+                    Parent: {{ parentTask.title }}
                 </RouterLink>
             </p>
-            <h3 class="text-lg font-semibold">{{ state.task.title }}</h3>
-            <p v-if="state.childTasks.length > 0" class="text-xs">
-                Progress:
-                {{state.childTasks.filter(childTask => childTask.listId === '1').length}}
-                /
-                {{ state.childTasks.length }}
-            </p>
+            <h3 class="text-lg font-semibold">{{ task.title }}</h3>
 
-            <p class="text-sm"> {{ state.task.description }} </p>
+            <p class="text-sm"> {{ task.description }} </p>
+
+
+            <div v-if="childTasks.length > 0" class="text-xs">
+                <hr class="my-2" />
+                <p>
+                    Progress: {{ progressPercentage }}% </p>
+                <ul class="m-2 px-2">
+                    <li v-for="childTask in childTasks" :key="childTask.id" class="list-disc">
+                        <RouterLink :to="`/tasks/${childTask.id}/edit`">
+                            {{ backendStore.listsById[childTask.listId]?.name }} - {{ childTask.title }}
+                        </RouterLink>
+                    </li>
+                </ul>
+            </div>
         </RouterLink>
-        <p v-else>Loading...</p>
     </section>
 </template>

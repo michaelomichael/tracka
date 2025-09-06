@@ -1,25 +1,27 @@
-import { initializeApp } from 'firebase/app'
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  setDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-} from 'firebase/firestore'
-import credentials from '@/../firebaseCredentials.json'
+// import { initializeApp } from 'firebase/app'
+// import {
+//   getFirestore,
+//   collection,
+//   getDocs,
+//   setDoc,
+//   deleteDoc,
+//   doc,
+//   onSnapshot,
+// } from 'firebase/firestore'
+// import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
+import { computed, reactive, ref } from 'vue'
+// import { ref } from 'firebase/database'
 
-export const firebaseApp = initializeApp(credentials)
+// export const firebaseApp = initializeApp(credentials)
 
-// used for the firestore refs
-const db = getFirestore(firebaseApp)
+// // used for the firestore refs
+// const db = getFirestore(firebaseApp)
 
-// here we can export reusable database references
+// // here we can export reusable database references
 
-const tasksRef = collection(db, 'tasks')
-const listsRef = collection(db, 'lists')
+// const tasksRef = collection(db, 'tasks')
+// const listsRef = collection(db, 'lists')
 
 const defaultData = {
   lists: {
@@ -62,22 +64,173 @@ const defaultData = {
   },
 }
 
-async function repopulateCollection(ref, typeName, items) {
-  const snapshot = await getDocs(ref)
-  const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, typeName, d.id)))
-  await Promise.all(deletions)
+// async function repopulateCollection(ref, typeName, items) {
+//   const snapshot = await getDocs(ref)
+//   const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, typeName, d.id)))
+//   await Promise.all(deletions)
 
-  const writes = items.map((item) => setDoc(doc(db, typeName, item.id), item))
-  await Promise.all(writes)
-}
+//   const writes = items.map((item) => setDoc(doc(db, typeName, item.id), item))
+//   await Promise.all(writes)
+// }
 
-export async function resetDb() {
-  repopulateCollection(tasksRef, 'tasks', Object.values(defaultData.tasks))
-  repopulateCollection(listsRef, 'lists', Object.values(defaultData.lists))
-}
+// export async function resetDb() {
+//   repopulateCollection(tasksRef, 'tasks', Object.values(defaultData.tasks))
+//   repopulateCollection(listsRef, 'lists', Object.values(defaultData.lists))
+// }
 
 //await resetDb()
 
+export const useBackendStore = defineStore('backendStore', () => {
+  const count = ref(0)
+  const listsById = reactive(defaultData.lists)
+  const tasksById = reactive(defaultData.tasks)
+  const name = ref('eduardo')
+  const doubleCount = computed(() => count.value * 2)
+  // TODO: Why doesn't the id field make it through?
+  //   const childTasksForTask = computed((id) => {
+  //     const task = tasksById[id]
+  //     return task === null
+  //       ? null
+  //       : task.childTaskIds
+  //           .map((childTaskId) => tasksById[childTaskId])
+  //           .filter((childTask) => childTask !== null)
+  //   })
+
+  function childTasksForTask(taskId) {
+    const task = tasksById[taskId]
+    return task === null
+      ? null
+      : task.childTaskIds
+          .map((childTaskId) => tasksById[childTaskId])
+          .filter((childTask) => childTask !== null)
+  }
+  function parentTaskForTask(taskId) {
+    const task = tasksById[taskId]
+    return task?.parentTaskId == null ? null : tasksById[task.parentTaskId]
+  }
+
+  // TODO: Maybe create separate methods instead, for the UI to call:
+  //      patchList({ name: "foo"})
+  //      patchTask({ title: "foo", description: "bar"})
+  //      setTaskParent(taskId, parentTaskIdOrNull)
+  //
+  //      The reason being that it's too tempting for the UI code to just modify
+  //      the existing list/task, and the parent/children won't be kept up-to-date.
+  //
+  //      Consider also having a version field and, for any of these patch/set methods,
+  //      you have to pass in what you believe to be the current version number of the
+  //      item you're changing. If that doesn't match the version number that's in the
+  //      DB then we don't make the change.
+
+  function updateList(newList) {
+    listsById[list.id] = newList
+    // TODO: Update the value in firestore, preferably in a transaction
+  }
+
+  //   function _isSet(obj, propertyName) {
+  //     return obj !== null && obj.hasOwnProperty(propertyName) && obj[propertyName] !== null
+  //   }
+
+  //   function patchTask(id, newValues) {
+  //     const task = tasksById[id]
+  //     if (task === null) {
+  //       error(`BackendStore.patchTask: Cannot find task with id ${id}`)
+  //     }
+
+  //     const propertyNames = ['title', 'description']
+  //     propertyNames.forEach((propertyName) => {
+  //       if (_isSet(newValues, propertyName)) {
+  //         task[propertyName] = newValues[propertyName]
+  //       }
+  //     })
+  //     // TODO: Update the value in firestore, preferably in a transaction
+  //   }
+
+  //   function setListForTask(taskId, newListId) {
+  //     const task = tasksById[id]
+  //     if (task === null) {
+  //       error(`BackendStore.setListForTask: Cannot find task with id ${id}`)
+  //     }
+
+  //   }
+
+  function updateTask(newTask) {
+    const taskId = newTask.id
+    const oldTask = tasksById[taskId]
+
+    if (oldTask !== null) {
+      // Check to see if its list has changed
+      if (oldTask.listId !== newTask.listId) {
+        console.log(
+          `BackendStore.updateTask: Changing list from ${oldTask.listId} to ${newTask.listId}`,
+        )
+        const newList = listsById[newTask.listId]
+        if (newList !== null) {
+          console.log('Before, newList had ', JSON.stringify(newList.taskIds))
+          newList.taskIds.unshift(taskId)
+          // TODO: Update the value in firestore, preferably in a transaction
+          console.log('After, newList has', JSON.stringify(newList.taskIds))
+
+          const oldList = listsById[oldTask.listId]
+          if (oldList !== null) {
+            console.log('Before, oldList had ', JSON.stringify(oldList.taskIds))
+            oldList.taskIds = oldList.taskIds.filter((otherTaskId) => otherTaskId !== taskId)
+            // TODO: Update the value in firestore, preferably in a transaction
+            console.log('After, oldList has ', JSON.stringify(oldList.taskIds))
+          } else {
+            console.warn(
+              `BackendStore.updateTask: Couldn't find old list with id ${oldTask.listId} for task id ${taskId}`,
+            )
+          }
+        } else {
+          throw `Couldn't find new list with id ${newTask.listId} for task id ${taskId}`
+        }
+      }
+
+      // Check to see if parent has changed
+      if (oldTask.parentTaskId !== newTask.parentTaskId) {
+        console.log(
+          `BackendStore.updateTask: Changing parent task Id from ${oldTask.parentTaskId} to ${newTask.parentTaskId}`,
+        )
+        const oldParentTask = tasksById[oldTask.parentTaskId]
+        oldParentTask.childTaskIds = oldParentTask.childTaskIds.filter(
+          (otherTaskId) => otherTaskId !== taskId,
+        )
+        // TODO: Update the value in firestore, preferably in a transaction
+
+        const newParentTask = tasksById[newTask.parentTaskId]
+        newParentTask.childTaskIds.unshift(taskId)
+        // TODO: Update the value in firestore, preferably in a transaction
+      }
+
+      // TODO: check to see if children have changed (not supported by UI yet)
+    } else {
+      console.warn("BackendStore.updateTask: Didn't find an existing task for", taskId, newTask)
+    }
+
+    tasksById[newTask.id] = newTask
+    // TODO: Update the value in firestore, preferably in a transaction
+  }
+
+  function increment() {
+    count.value++
+  }
+
+  // TODO: Can I combine the return with the consts?
+  return {
+    count,
+    listsById,
+    tasksById,
+    name,
+    doubleCount,
+    updateList,
+    updateTask,
+    childTasksForTask,
+    parentTaskForTask,
+    increment,
+  }
+})
+/*
 const backend = {
   _isLoaded: false,
   _data: { lists: {}, tasks: {} }, // copy(defaultData),
@@ -285,3 +438,4 @@ function untilLoaded() {
 console.log('###### Initialised backend.js #######', new Date().toISOString())
 
 export default backend
+*/
