@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { useBackendStore } from './services/backendStore';
+import { onMounted } from 'vue';
+
+const backendStore = useBackendStore()
+
+onMounted(() => {
+    backendStore.init()
+})
+
 </script>
 
 <template>

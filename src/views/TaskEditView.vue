@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, reactive } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
+import { storeToRefs } from "pinia";
 
 const router = useRouter()
 
@@ -13,16 +14,12 @@ const id = route.params.id;
 
 const toast = useToast();
 
+const refs = storeToRefs(backendStore)
+const tasksByIdRef = refs.tasksById
+const listsByIdRef = refs.listsById
 
 
-const state = reactive({
-    allListsById: {},
-    allTasksById: {},
-    task: null,
-    parentTask: null,
-    childTasks: [],
-    isLoading: true,
-});
+
 
 const form = reactive({
     title: "",
@@ -31,15 +28,31 @@ const form = reactive({
     parentTaskId: "",
 });
 
-
-const task = backendStore.tasksById[id]
-const parentTask = task.parentTaskId === null ? null : backendStore.tasksById[task.parentTaskId]
-// TODO: Make this a method on the store
-const childTasks = task.childTaskIds
-    .map((childTaskId) => backendStore.tasksById[childTaskId])
-    .filter((childTask) => childTask !== null)
+const state = reactive({
+    task: null,
+    parentTask: null,
+    childTasks: [],
+    lists: [],
+    tasks: [],
+})
 
 onMounted(() => {
+    state.lists = listsByIdRef.value ? Object.values(listsByIdRef.value) : []
+    state.tasks = tasksByIdRef.value ? Object.values(tasksByIdRef.value) : []
+
+    const task = tasksByIdRef.value[id]
+    state.task = task
+
+    if (!task) {
+        console.warn("TaskEditView.onMounted: don't yet have task with ID ", id);
+        return;
+    }
+    console.log("TaskEditView: got task for id", id, JSON.parse(JSON.stringify(task)))
+    state.parentTask = task.parentTaskId === null ? null : tasksByIdRef.value[task.parentTaskId]
+    // TODO: Make this a method on the store
+    state.childTasks = task.childTaskIds
+        .map((childTaskId) => tasksByIdRef.value[childTaskId])
+        .filter((childTask) => childTask !== null)
     form.title = task.title;
     form.description = task.description;
     form.listId = task.listId;
@@ -63,16 +76,16 @@ function copy(anything) {
 const handleSubmit = () => {
     console.log("TaskEditView: Submitting")
     const updatedTask = {
-        id: task.id,
+        id: state.task.id,
         title: form.title,
         description: form.description,
         listId: form.listId,
         parentTaskId: form.parentTaskId,
-        childTaskIds: copy(task.childTaskIds),
+        childTaskIds: copy(state.task.childTaskIds),
     };
 
-    // const oldList = backendStore.listsById[task.listId];
-    // const newList = backendStore.listsById[updatedTask.listId];
+    // const oldList = listsByIdRef.value[task.listId];
+    // const newList = listsByIdRef.value[updatedTask.listId];
 
     // if (newList === null) {
     //     throw (`Can't find new list with ID ${updatedTask.listId}`);
@@ -132,7 +145,7 @@ const handleSubmit = () => {
                 <label for="listId" class="block text-gray-700 font-bold mb-2">List</label>
                 <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
                     required>
-                    <option v-for="list in Object.values(backendStore.listsById)" :key="list.id" :value="list.id">{{
+                    <option v-for="list in state.lists" :key="list.id" :value="list.id">{{
                         list.name }}
                     </option>
                 </select>
@@ -143,17 +156,17 @@ const handleSubmit = () => {
                 <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId"
                     class="border rounded w-full py-2 px-3">
                     <option
-                        v-for="parentTask in Object.values(backendStore.tasksById).filter(possibleParentTask => possibleParentTask.id !== id && task.childTaskIds.indexOf(possibleParentTask.id) < 0)"
+                        v-for="parentTask in state.tasks.filter(possibleParentTask => possibleParentTask.id !== id && state.task.childTaskIds.indexOf(possibleParentTask.id) < 0)"
                         :key="parentTask.id" :value="parentTask.id">{{
                             parentTask.title }}
                     </option>
                 </select>
             </div>
 
-            <div class="mb-4" v-if="childTasks.length > 0">
+            <div class="mb-4" v-if="state.childTasks.length > 0">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
                 <ul id="childTasks">
-                    <li v-for="childTask in childTasks" :key="childTask.id">
+                    <li v-for="childTask in state.childTasks" :key="childTask.id">
                         <RouterLink :to="`/tasks/${childTask.id}/edit`">{{ childTask.title }}</RouterLink>
                     </li>
                 </ul>
