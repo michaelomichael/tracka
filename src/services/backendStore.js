@@ -90,11 +90,8 @@ const tasksRef = collection(db, 'tasks')
 const listsRef = collection(db, 'lists')
 
 export const useBackendStore = defineStore('backendStore', () => {
-  const count = ref(0)
   const listsById = ref({}) // defaultData.lists)
   const tasksById = ref({}) // defaultData.tasks)
-  const name = ref('eduardo')
-  const doubleCount = computed(() => count.value * 2)
   //   const _data = reactive({ listsById: {}, tasksById: {} })
   //   const listsById = computed(() => listsById.value)
   //   const tasksById = computed(() => tasksById.value)
@@ -109,24 +106,35 @@ export const useBackendStore = defineStore('backendStore', () => {
     if (!unsubscribeTasks) {
       // avoid duplicate listeners
       unsubscribeTasks = onSnapshot(tasksRef, (snapshot) => {
-        const newTasksById = {}
-        snapshot.docs.forEach((doc) => (newTasksById[doc.id] = { id: doc.id, ...doc.data() }))
-        console.log(`BackendStore.onSnapshot: Got new tasks:`, JSON.stringify(newTasksById))
-        tasksById.value = newTasksById
+        console.log('Snapshot')
+        //if (_isTasksLoaded.value) {
+        handleDocChanges(snapshot, 'task', tasksById.value)
+        //  } else {
+        // const newTasksById = {}
+        //snapshot.docs.forEach((doc) => (newTasksById[doc.id] = { id: doc.id, ...doc.data() }))
+        // console.log(`BackendStore.onSnapshot: Got new tasks:`, JSON.stringify(newTasksById))
+        //  tasksById.value = newTasksById
         _isTasksLoaded.value = true
+        //   }
       })
     }
     if (!unsubscribeLists) {
       // avoid duplicate listeners
+      console.log('Snapshot (lists)')
       unsubscribeLists = onSnapshot(listsRef, (snapshot) => {
-        const newListsById = {}
-        snapshot.docs.forEach((doc) => (newListsById[doc.id] = { id: doc.id, ...doc.data() }))
-        console.log(`BackendStore.onSnapshot: Got new lists:`, JSON.stringify(newListsById))
-        listsById.value = newListsById
+        // if (_isListsLoaded.value) {
+        handleDocChanges(snapshot, 'list', listsById.value)
+        //  } else {
+        //    const newListsById = {}
+        //   snapshot.docs.forEach((doc) => (newListsById[doc.id] = { id: doc.id, ...doc.data() }))
+        //   console.log(`BackendStore.onSnapshot: Got new lists:`, JSON.stringify(newListsById))
+        //   listsById.value = newListsById
         _isListsLoaded.value = true
+        // }
       })
     }
   }
+
   function childTasksForTask(taskId) {
     const task = tasksById.value[taskId]
     return task === null
@@ -205,12 +213,9 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   // TODO: Can I combine the return with the consts?
   return {
-    count,
     init,
     listsById,
     tasksById,
-    name,
-    doubleCount,
     updateList,
     updateTask,
     childTasksForTask,
@@ -224,6 +229,40 @@ export const useBackendStore = defineStore('backendStore', () => {
     isLoaded,
   }
 })
+
+function handleDocChanges(snapshot, docType, containerObject) {
+  snapshot.docChanges().forEach((change) => {
+    const itemData = { id: change.doc.id, ...change.doc.data() }
+
+    switch (change.type) {
+      case 'added':
+        console.log(`BackendStore.handleDocChange: DB reports ADD of ${docType} id=${itemData.id}`)
+        containerObject[itemData.id] = itemData
+        break
+
+      case 'modified':
+        console.log(
+          `BackendStore.handleDocChange: DB reports UPDATE of ${docType} id=${itemData.id}`,
+        )
+        containerObject[itemData.id] = itemData
+        // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
+        break
+
+      case 'removed':
+        console.log(
+          `BackendStore.handleDocChange: DB reports DELETE of ${docType} id=${itemData.id}`,
+        )
+        delete containerObject[itemData.id]
+        break
+
+      default:
+        console.warn(
+          `backendStore.handleDocChange: Unknown change type '${change.type}' for ${docType} id=${itemData.id}`,
+        )
+        break
+    }
+  })
+}
 
 // async function loadInitialSnapshotOld(collectionRef, containerObject) {
 //   console.log('BackendStore.loadInitialSnapshot: Starting for ', collectionRef)
