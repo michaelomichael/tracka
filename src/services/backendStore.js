@@ -100,6 +100,9 @@ export const useBackendStore = defineStore('backendStore', () => {
   //   const tasksById = computed(() => tasksById.value)
   let unsubscribeTasks = null
   let unsubscribeLists = null
+  let _isListsLoaded = ref(false)
+  let _isTasksLoaded = ref(false)
+  const isLoaded = computed(() => _isListsLoaded.value && _isTasksLoaded.value)
 
   // Sync Firestore -> Pinia
   const init = () => {
@@ -110,6 +113,7 @@ export const useBackendStore = defineStore('backendStore', () => {
         snapshot.docs.forEach((doc) => (newTasksById[doc.id] = { id: doc.id, ...doc.data() }))
         console.log(`BackendStore.onSnapshot: Got new tasks:`, JSON.stringify(newTasksById))
         tasksById.value = newTasksById
+        _isTasksLoaded.value = true
       })
     }
     if (!unsubscribeLists) {
@@ -119,6 +123,7 @@ export const useBackendStore = defineStore('backendStore', () => {
         snapshot.docs.forEach((doc) => (newListsById[doc.id] = { id: doc.id, ...doc.data() }))
         console.log(`BackendStore.onSnapshot: Got new lists:`, JSON.stringify(newListsById))
         listsById.value = newListsById
+        _isListsLoaded.value = true
       })
     }
   }
@@ -214,6 +219,9 @@ export const useBackendStore = defineStore('backendStore', () => {
     // listsById,
     // tasksById,
     // _data,
+    _isListsLoaded,
+    _isTasksLoaded,
+    isLoaded,
   }
 })
 

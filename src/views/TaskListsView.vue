@@ -3,22 +3,31 @@ import { useBackendStore } from "../services/backendStore";
 import TaskList from "../components/TaskList.vue";
 import { storeToRefs } from "pinia";
 import { list } from "firebase/storage";
-import { onBeforeUpdate, reactive } from "vue";
+import { onBeforeUpdate, reactive, watchEffect } from "vue";
 
 const backendStore = useBackendStore();
-const { listsById } = storeToRefs(backendStore)
+// const { listsById } = storeToRefs(backendStore)
 
-console.log("TaskListsView: listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
+// console.log("TaskListsView: listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
 const state = reactive({
-    lists: Object.values(listsById.value), // TODO: Is it ok to do this?
+    isLoaded: false,
+    lists: [],
+    // lists: Object.values(listsById.value), // TODO: Is it ok to do this?
 })
 
-onBeforeUpdate(() => {
-    console.log("TaskListsView: onBeforeUpdate, listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
-    console.log("TaskListsView: onBeforeUpdate, state.lists was ", JSON.stringify(state.lists))
-    state.lists = Object.values(listsById.value)
-    console.log("TaskListsView: onBeforeUpdate, state.lists is now ", JSON.stringify(state.lists))
-});
+watchEffect(() => {
+    if (backendStore.isLoaded) {
+        state.lists = Object.values(backendStore.listsById)
+        state.isLoaded = true
+    }
+})
+
+// onBeforeUpdate(() => {
+//     console.log("TaskListsView: onBeforeUpdate, listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
+//     console.log("TaskListsView: onBeforeUpdate, state.lists was ", JSON.stringify(state.lists))
+//     state.lists = Object.values(listsById.value)
+//     console.log("TaskListsView: onBeforeUpdate, state.lists is now ", JSON.stringify(state.lists))
+// });
 </script>
 
 <template>
@@ -26,10 +35,8 @@ onBeforeUpdate(() => {
         <main class="flex-1 overflow-x-auto p-6 bg-white">
             <h2>Lists galore!</h2>
 
-            <section v-if="listsById.value || state.lists">
+            <section v-if="state.isLoaded">
                 <div class="flex ">
-
-                    <!-- <pre>Hello: {{ JSON.stringify(state.lists) }} {{ JSON.stringify(listsById.value) }}</pre> -->
                     <TaskList v-for="list in state.lists" :key="list.id" :listId="list.id" />
                 </div>
             </section>

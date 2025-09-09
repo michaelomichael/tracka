@@ -8,6 +8,11 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'home',
+      redirect: '/tasks',
+    },
+    {
+      path: '/tasks',
       name: 'task-lists',
       component: TaskListsView,
     },
