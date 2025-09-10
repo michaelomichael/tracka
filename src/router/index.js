@@ -17,14 +17,14 @@ const router = createRouter({
       component: TaskListsView,
     },
     {
-      path: '/tasks/:id/edit',
+      path: '/tasks/:taskId/edit',
       name: 'edit-task',
-      component: TaskEditView,
+      component: TaskListsView,
     },
     {
       path: '/tasks/new',
       name: 'new-task',
-      component: TaskEditView,
+      component: TaskListsView,
     },
     // {
     //   path: '/tasks/{id}',

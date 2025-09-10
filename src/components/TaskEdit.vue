@@ -32,7 +32,7 @@ const state = reactive({
 
 watchEffect(() => {
     if (backendStore.isLoaded) {
-        if (!state.isLoaded) {
+        if (state.task?.id !== props.taskId) {
             // Only init the form once
             if (props.taskId == null) {
                 state.task = {
@@ -78,6 +78,7 @@ const handleSubmit = () => {
         backendStore.updateTask(updatedTask);
         toast.success(`Updated task '${updatedTask.title}'`);
     }
+    // TODO: clear the form?
 
     router.push("/");
 }
@@ -117,7 +118,7 @@ const handleSubmit = () => {
                     class="border rounded w-full py-2 px-3">
                     <option value=""></option>
                     <option
-                        v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== props.taskId && state.task.childTaskIds.indexOf(possibleParentTask.id) < 0)"
+                        v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== props.taskId && state.task?.childTaskIds.indexOf(possibleParentTask.id) < 0)"
                         :key="parentTask.id" :value="parentTask.id">{{
                             parentTask.title }}
                     </option>
