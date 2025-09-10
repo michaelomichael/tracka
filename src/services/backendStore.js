@@ -1,20 +1,28 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore'
 import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
+import { single } from './utils'
 
 const defaultData = {
   lists: {
     1: {
       id: '1',
       name: 'Done',
+      specialCategory: 'DONE',
       taskIds: ['1000'],
     },
     2: {
       id: '2',
       name: 'Backlog',
+      specialCategory: 'NEW_ITEMS',
       taskIds: ['2000', '3000'],
+    },
+    3: {
+      id: '3',
+      name: 'Today',
+      taskIds: [],
     },
   },
   tasks: {
@@ -45,6 +53,27 @@ const defaultData = {
   },
 }
 
+function addLotsOfTasks() {
+  const ids = new Array(25).fill('').map((_, index) => {
+    const id = `${5000 + index}`
+    setDoc(doc(db, 'tasks', id), {
+      id: id,
+      title: `Extra task #${index + 1}`,
+      description: `Description of extra task #${index + 1}`,
+      listId: '3',
+      parentTaskId: null,
+      childTaskIds: [],
+    })
+    return id
+  })
+
+  setDoc(doc(db, 'lists', '3'), {
+    id: '3',
+    name: 'Today',
+    taskIds: ids,
+  })
+}
+
 async function repopulateCollection(collectionType) {
   const snapshot = await getDocs(collection(db, collectionType))
   const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, collectionType, d.id)))
@@ -72,6 +101,8 @@ export const useBackendStore = defineStore('backendStore', () => {
   const _data = reactive({ listsById: {}, tasksById: {} })
   const lists = computed(() => Object.values(_data.listsById))
   const tasks = computed(() => Object.values(_data.tasksById))
+  const doneList = computed(() => single(lists, (list) => list.specialCategory === 'DONE'))
+  const newItemsList = computed(() => single(lists, (list) => list.specialCategory === 'NEW_ITEMS'))
   const _status = reactive({
     lists: {
       unsubscribeCallback: null,
@@ -156,9 +187,9 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     return task === null
       ? null
-      : task.childTaskIds
-          .map((childTaskId) => getTask(childTaskId))
-          .filter((childTask) => childTask !== null)
+      : (task.childTaskIds || [])
+          ?.map((childTaskId) => getTask(childTaskId))
+          ?.filter((childTask) => childTask !== null)
   }
 
   function getParentTaskForTask(taskIdOrObject) {

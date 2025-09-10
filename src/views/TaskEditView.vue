@@ -3,6 +3,7 @@ import { reactive, watchEffect } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
+import { copy } from "../services/utils";
 
 const backendStore = useBackendStore()
 const toast = useToast();
@@ -42,10 +43,6 @@ watchEffect(() => {
         state.isLoaded = true
     }
 })
-
-function copy(anything) {
-    return JSON.parse(JSON.stringify(anything));
-}
 
 const handleSubmit = () => {
     console.log("TaskEditView: Submitting")
