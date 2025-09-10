@@ -2,6 +2,7 @@
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './ProgressBar.vue';
+import { stringToHslColour } from '../services/utils';
 
 const backendStore = useBackendStore();
 
@@ -17,7 +18,7 @@ const state = reactive({
     task: {},
     parentTask: {},
     childTasks: [],
-    progressPercentage: -1,
+    progress: -1,
 })
 
 watchEffect(async () => {
@@ -37,11 +38,12 @@ watchEffect(async () => {
 </script>
 
 <template>
-    <section v-if="state.isLoaded" class="bg-gray-100 hover:bg-gray-200 rounded-md w-60 my-4 border-2 p-4">
-        <RouterLink :to="`/tasks/${taskId}/edit`">
+    <RouterLink :to="`/tasks/${taskId}/edit`">
+        <section v-if="state.isLoaded" class="bg-gray-100 hover:bg-gray-200 rounded-md my-4 border-2 p-4">
             <p v-if="state.parentTask !== null" class="text-xs mb-2">
                 <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
-                    class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2">
+                    class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"
+                    :style="`background-color: ${stringToHslColour(state.parentTask.id)}`">
                     Parent: {{ state.parentTask.title }}
                 </RouterLink>
             </p>
@@ -59,6 +61,6 @@ watchEffect(async () => {
                     </li>
                 </ul>
             </div>
-        </RouterLink>
-    </section>
+        </section>
+    </RouterLink>
 </template>

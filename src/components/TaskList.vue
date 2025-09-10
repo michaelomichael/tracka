@@ -26,7 +26,7 @@ watchEffect(() => {
 </script>
 
 <template>
-    <section v-if="state.isLoaded" class="bg-gray-400 rounded-xl w-fit p-4 m-10">
+    <section v-if="state.isLoaded" class="bg-gray-400 rounded-xl w-70  p-4 m-10">
         <h2 class="text-xl font-semibold text-white text-center">{{ state.list.name }}</h2>
         <TaskCard v-for="taskId in (state.list.taskIds || [])" :key="taskId" :taskId="taskId" />
     </section>

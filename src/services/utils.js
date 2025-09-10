@@ -25,3 +25,13 @@ export const single = (arr, predicate) => {
 export const copy = (anything) => {
   return JSON.parse(JSON.stringify(anything))
 }
+
+export const stringToHslColour = (str) => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  // Convert hash to [0–360] for hue
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 70%, 50%)`
+}
