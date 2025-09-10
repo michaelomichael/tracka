@@ -8,7 +8,7 @@ const backendStore = useBackendStore()
 const toast = useToast();
 const router = useRouter()
 const route = useRoute()
-const id = route.params.id;
+const taskId = route.params.id;
 
 const form = reactive({
     title: "",
@@ -28,13 +28,13 @@ watchEffect(() => {
     if (backendStore.isLoaded) {
         if (!state.isLoaded) {
             // Only init the form once
-            state.task = backendStore.getTask(id)
+            state.task = backendStore.getTask(taskId)
             form.title = state.task.title;
             form.description = state.task.description;
             form.listId = state.task.listId;
             form.parentTaskId = state.task.parentTaskId;
 
-            console.log("TaskEditView: got task for id", id, JSON.parse(JSON.stringify(state.task)))
+            console.log("TaskEditView: got task for id", taskId, JSON.parse(JSON.stringify(state.task)))
         }
 
         state.parentTask = backendStore.getParentTaskForTask(state.task)
@@ -67,7 +67,7 @@ const handleSubmit = () => {
 
 <template>
     <section class="w-100 m-auto">
-        <h2>Edit task (#{{ id }})</h2>
+        <h2>Edit task (#{{ taskId }})</h2>
 
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
             <h2 class="text-3xl text-center font-semibold mb-6">Edit Job</h2>
@@ -98,7 +98,7 @@ const handleSubmit = () => {
                 <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId"
                     class="border rounded w-full py-2 px-3">
                     <option
-                        v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== id && state.task.childTaskIds.indexOf(possibleParentTask.id) < 0)"
+                        v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== taskId && state.task.childTaskIds.indexOf(possibleParentTask.id) < 0)"
                         :key="parentTask.id" :value="parentTask.id">{{
                             parentTask.title }}
                     </option>
