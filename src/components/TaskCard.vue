@@ -1,7 +1,6 @@
 <script setup>
-import { storeToRefs } from 'pinia';
 import { useBackendStore } from '../services/backendStore';
-import { onBeforeUpdate, onMounted, reactive, watchEffect } from 'vue';
+import { reactive, watchEffect } from 'vue';
 
 const backendStore = useBackendStore();
 
@@ -9,32 +8,20 @@ const props = defineProps({
     id: String,
 });
 
-//const { tasksById, listsById } = storeToRefs(backendStore)
-// const { isLoaded } = storeToRefs(backendStore)
 const state = reactive({
     isLoaded: false,
     task: {},
     parentTask: {},
     childTasks: [],
     progressPercentage: -1,
-    //listsById: {},
 })
 
 watchEffect(async () => {
-    updateState(state)
-})
-
-function updateState(state) {
     console.log("TaskCard.updateState: backendStore.isLoaded = ", JSON.stringify(backendStore.isLoaded))
-    // console.log("TaskCard.updateState: isLoaded = ", JSON.stringify(isLoaded))
     if (backendStore.isLoaded) {
-        const tasksById = backendStore.tasksById
-        state.task = tasksById[props.id];
-        state.parentTask = state.task.parentTaskId === null ? null : tasksById[state.task.parentTaskId];
-        state.childTasks = state.childTaskIds
-            ?.map((childTaskId) => tasksById[childTaskId])
-            ?.filter((childTask) => childTask !== null)
-            || [];
+        state.task = backendStore.getTask(props.id);
+        state.parentTask = backendStore.getParentTaskForTask(state.task)
+        state.childTasks = backendStore.getChildTasksForTask(state.task)
 
         state.progressPercentage = Math.floor(
             100 *
@@ -42,26 +29,11 @@ function updateState(state) {
             state.childTasks.length
         );
         state.isLoaded = true
-        //state.listsById = listsById.value;
     }
-}
-
-onMounted(() => {
-    // updateState(state);
-});
-onBeforeUpdate(() => {
-    // updateState(state);
-});
-
-
-
-console.log("TaskCard: Initialised for ", props.id)
-
+})
 </script>
 
 <template>
-    <!-- <p>Isloaded = {{ state.isLoaded }}</p> -->
-    <!-- <p>Tasks = {{ backendStore.tasksById }}</p> -->
     <section v-if="state.isLoaded" class="bg-gray-100 hover:bg-gray-200 rounded-md w-60 my-4 border-2 p-4">
         <RouterLink :to="`/tasks/${id}/edit`">
             <p v-if="state.parentTask !== null" class="text-xs mb-2">
@@ -74,7 +46,6 @@ console.log("TaskCard: Initialised for ", props.id)
 
             <p class="text-sm"> {{ state.task.description }} </p>
 
-
             <div v-if="state.childTasks.length > 0" class="text-xs">
                 <hr class="my-2" />
                 <p>
@@ -82,7 +53,7 @@ console.log("TaskCard: Initialised for ", props.id)
                 <ul class="m-2 px-2">
                     <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
                         <RouterLink :to="`/tasks/${childTask.id}/edit`">
-                            {{ backendStore.listsById[childTask.listId]?.name }} - {{ childTask.title }}
+                            {{ backendStore.getListForTask(childTask)?.name }} - {{ childTask.title }}
                         </RouterLink>
                     </li>
                 </ul>

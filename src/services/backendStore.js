@@ -1,27 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  setDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  updateDoc,
-} from 'firebase/firestore'
+import { getFirestore, collection, doc, onSnapshot, updateDoc } from 'firebase/firestore'
 import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
-import { computed, reactive, ref } from 'vue'
-
-// export const firebaseApp = initializeApp(credentials)
-
-// // used for the firestore refs
-// const db = getFirestore(firebaseApp)
-
-// // here we can export reusable database references
-
-// const tasksRef = collection(db, 'tasks')
-// const listsRef = collection(db, 'lists')
+import { computed, reactive } from 'vue'
 
 const defaultData = {
   lists: {
@@ -64,98 +45,135 @@ const defaultData = {
   },
 }
 
-// async function repopulateCollection(ref, typeName, items) {
-//   const snapshot = await getDocs(ref)
-//   const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, typeName, d.id)))
-//   await Promise.all(deletions)
+async function repopulateCollection(collectionType) {
+  const snapshot = await getDocs(collection(db, collectionType))
+  const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, collectionType, d.id)))
+  await Promise.all(deletions)
 
-//   const writes = items.map((item) => setDoc(doc(db, typeName, item.id), item))
-//   await Promise.all(writes)
-// }
+  const writes = Object.values(defaultData[collectionType]).map((item) =>
+    setDoc(doc(db, collectionType, item.id), item),
+  )
+  await Promise.all(writes)
+}
 
-// export async function resetDb() {
-//   repopulateCollection(tasksRef, 'tasks', Object.values(defaultData.tasks))
-//   repopulateCollection(listsRef, 'lists', Object.values(defaultData.lists))
-// }
+export async function resetDb() {
+  repopulateCollection('tasks')
+  repopulateCollection('lists')
+}
 
 //await resetDb()
+
+// TODO: Is this not done in the main app script?
 export const firebaseApp = initializeApp(credentials)
 
-// used for the firestore refs
 const db = getFirestore(firebaseApp)
 
-// here we can export reusable database references
-
-const tasksRef = collection(db, 'tasks')
-const listsRef = collection(db, 'lists')
-
 export const useBackendStore = defineStore('backendStore', () => {
-  const listsById = ref({}) // defaultData.lists)
-  const tasksById = ref({}) // defaultData.tasks)
-  //   const _data = reactive({ listsById: {}, tasksById: {} })
-  //   const listsById = computed(() => listsById.value)
-  //   const tasksById = computed(() => tasksById.value)
-  let unsubscribeTasks = null
-  let unsubscribeLists = null
-  let _isListsLoaded = ref(false)
-  let _isTasksLoaded = ref(false)
-  const isLoaded = computed(() => _isListsLoaded.value && _isTasksLoaded.value)
+  const _data = reactive({ listsById: {}, tasksById: {} })
+  const lists = computed(() => Object.values(_data.listsById))
+  const tasks = computed(() => Object.values(_data.tasksById))
+  const _status = reactive({
+    lists: {
+      unsubscribeCallback: null,
+      isLoaded: false,
+    },
+    tasks: {
+      unsubscribeCallback: null,
+      isLoaded: false,
+    },
+  })
+  const isLoaded = computed(() => _status.lists.isLoaded && _status.tasks.isLoaded)
 
   // Sync Firestore -> Pinia
   const init = () => {
-    if (!unsubscribeTasks) {
-      // avoid duplicate listeners
-      unsubscribeTasks = onSnapshot(tasksRef, (snapshot) => {
-        console.log('Snapshot')
-        //if (_isTasksLoaded.value) {
-        handleDocChanges(snapshot, 'task', tasksById.value)
-        //  } else {
-        // const newTasksById = {}
-        //snapshot.docs.forEach((doc) => (newTasksById[doc.id] = { id: doc.id, ...doc.data() }))
-        // console.log(`BackendStore.onSnapshot: Got new tasks:`, JSON.stringify(newTasksById))
-        //  tasksById.value = newTasksById
-        _isTasksLoaded.value = true
-        //   }
-      })
-    }
-    if (!unsubscribeLists) {
-      // avoid duplicate listeners
-      console.log('Snapshot (lists)')
-      unsubscribeLists = onSnapshot(listsRef, (snapshot) => {
-        // if (_isListsLoaded.value) {
-        handleDocChanges(snapshot, 'list', listsById.value)
-        //  } else {
-        //    const newListsById = {}
-        //   snapshot.docs.forEach((doc) => (newListsById[doc.id] = { id: doc.id, ...doc.data() }))
-        //   console.log(`BackendStore.onSnapshot: Got new lists:`, JSON.stringify(newListsById))
-        //   listsById.value = newListsById
-        _isListsLoaded.value = true
-        // }
-      })
+    for (let collectionType of ['lists', 'tasks']) {
+      const entityStatus = _status[collectionType]
+
+      if (entityStatus.unsubscribeCallback === null) {
+        // avoid duplicate listeners
+        entityStatus.unsubscribeCallback = onSnapshot(
+          collection(db, collectionType),
+          (snapshot) => {
+            console.log('Snapshot')
+            handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
+            entityStatus.isLoaded = true
+          },
+        )
+      }
     }
   }
 
-  function childTasksForTask(taskId) {
-    const task = tasksById.value[taskId]
+  function _ensureLoaded() {
+    if (!isLoaded) {
+      throw 'backendStore: attempted to access tasks or lists before data was loaded'
+    }
+  }
+
+  function getTask(taskId) {
+    _ensureLoaded()
+    const task = _data.tasksById[taskId]
+    if (task === null) {
+      console.warn(`backendStore.getTask: Task id '${taskId}' was not found`)
+    }
+    return task
+  }
+
+  function getList(listId) {
+    _ensureLoaded()
+    const list = _data.listsById[listId]
+    if (list === null) {
+      console.warn(`backendStore.getList: List id '${listId}' was not found`)
+    }
+    return list
+  }
+
+  function getListForTask(taskIdOrObject) {
+    _ensureLoaded()
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+    if (task === null) {
+      throw 'backendStore.getListForTask: Task was null'
+    }
+
+    if (task.listId === null) {
+      throw `backendStore.getListForTask: Task id ${task.id} has no listId`
+    }
+
+    return getList(task.listId)
+  }
+
+  function getParentAndChildTasksForTask(taskIdOrObject) {
+    _ensureLoaded()
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+    return {
+      parentTask: getParentTaskForTask(task),
+      childTasks: getChildTasksForTask(task),
+    }
+  }
+
+  function getChildTasksForTask(taskIdOrObject) {
+    _ensureLoaded()
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+
     return task === null
       ? null
       : task.childTaskIds
-          .map((childTaskId) => tasksById.value[childTaskId])
+          .map((childTaskId) => getTask(childTaskId))
           .filter((childTask) => childTask !== null)
   }
-  function parentTaskForTask(taskId) {
-    const task = tasksById.value[taskId]
-    return task?.parentTaskId == null ? null : tasksById.value[task.parentTaskId]
+
+  function getParentTaskForTask(taskIdOrObject) {
+    _ensureLoaded()
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+    return task?.parentTaskId == null ? null : getTask(task.parentTaskId)
   }
 
   function updateList(newList) {
     updateDoc(doc(db, 'lists', newList.id), newList)
-    // listsById.value[list.id] = newList
   }
 
   function updateTask(newTask) {
     const taskId = newTask.id
-    const oldTask = tasksById.value[taskId]
+    const oldTask = getTask(taskId)
 
     if (oldTask !== null) {
       // Check to see if its list has changed
@@ -207,42 +225,39 @@ export const useBackendStore = defineStore('backendStore', () => {
     updateDoc(doc(db, 'tasks', taskId), newTask)
   }
 
-  function increment() {
-    count.value++
-  }
-
-  // TODO: Can I combine the return with the consts?
   return {
+    _data,
+    _status,
     init,
-    listsById,
-    tasksById,
+    isLoaded,
+    tasks,
+    lists,
+    getTask,
+    getList,
+    getListForTask,
+    getParentAndChildTasksForTask,
+    getChildTasksForTask,
+    getParentTaskForTask,
     updateList,
     updateTask,
-    childTasksForTask,
-    parentTaskForTask,
-    increment,
-    // listsById,
-    // tasksById,
-    // _data,
-    _isListsLoaded,
-    _isTasksLoaded,
-    isLoaded,
   }
 })
 
-function handleDocChanges(snapshot, docType, containerObject) {
+function handleDocChanges(snapshot, collectionType, containerObject) {
   snapshot.docChanges().forEach((change) => {
     const itemData = { id: change.doc.id, ...change.doc.data() }
 
     switch (change.type) {
       case 'added':
-        console.log(`BackendStore.handleDocChange: DB reports ADD of ${docType} id=${itemData.id}`)
+        console.log(
+          `BackendStore.handleDocChange: DB reports ADD in ${collectionType}: id=${itemData.id}`,
+        )
         containerObject[itemData.id] = itemData
         break
 
       case 'modified':
         console.log(
-          `BackendStore.handleDocChange: DB reports UPDATE of ${docType} id=${itemData.id}`,
+          `BackendStore.handleDocChange: DB reports UPDATE in ${collectionType}: id=${itemData.id}`,
         )
         containerObject[itemData.id] = itemData
         // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
@@ -250,59 +265,16 @@ function handleDocChanges(snapshot, docType, containerObject) {
 
       case 'removed':
         console.log(
-          `BackendStore.handleDocChange: DB reports DELETE of ${docType} id=${itemData.id}`,
+          `BackendStore.handleDocChange: DB reports DELETE in ${collectionType}: id=${itemData.id}`,
         )
         delete containerObject[itemData.id]
         break
 
       default:
         console.warn(
-          `backendStore.handleDocChange: Unknown change type '${change.type}' for ${docType} id=${itemData.id}`,
+          `backendStore.handleDocChange: Unknown change type '${change.type}' for ${collectionType} id=${itemData.id}`,
         )
         break
     }
   })
 }
-
-// async function loadInitialSnapshotOld(collectionRef, containerObject) {
-//   console.log('BackendStore.loadInitialSnapshot: Starting for ', collectionRef)
-//   const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
-//     console.log('BackendStore.loadInitialSnapshot: Got onSnapshot callback for ', collectionRef)
-//     snapshot.docChanges().forEach((change) => {
-//       const itemData = { id: change.doc.id, ...change.doc.data() }
-
-//       if (change.type === 'added') {
-//         console.log(
-//           'BackendStore.loadInitialSnapshot: Firestore says: added document',
-//           itemData.id,
-//           itemData,
-//         )
-//         containerObject[itemData.id] = itemData
-//       }
-
-//       if (change.type === 'modified') {
-//         console.log(
-//           'BackendStore.loadInitialSnapshot: Firestore says: modified document',
-//           itemData.id,
-//           itemData,
-//         )
-//         containerObject[itemData.id] = itemData
-//         // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
-//       }
-
-//       if (change.type === 'removed') {
-//         console.log(
-//           'BackendStore.loadInitialSnapshot: Firestore says: deleted document',
-//           itemData.id,
-//           itemData,
-//         )
-//         delete containerObject[itemData.id]
-//       }
-//     })
-//   })
-
-//   console.log('BackendStore.loadInitialSnapshot: done')
-//   //onUnmounted(() => {
-//   //  unsubscribe() // stop listening when component is destroyed
-//   //})
-// }

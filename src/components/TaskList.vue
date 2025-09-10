@@ -1,11 +1,9 @@
 <script setup>
 import TaskCard from './TaskCard.vue';
 import { useBackendStore } from '../services/backendStore';
-import { storeToRefs } from 'pinia';
-import { onBeforeUpdate, onMounted, reactive, watchEffect } from 'vue';
+import { reactive, watchEffect } from 'vue';
 
 const backendStore = useBackendStore();
-// const { listsById } = storeToRefs(backendStore)
 
 const props = defineProps({
     listId: {
@@ -21,19 +19,10 @@ const state = reactive({
 
 watchEffect(() => {
     if (backendStore.isLoaded) {
-        state.list = backendStore.listsById[props.listId]
+        state.list = backendStore.getList(props.listId)
         state.isLoaded = true
     }
 })
-// onMounted(() => {
-//     state.list = listsById.value[props.listId]
-// });
-
-// onBeforeUpdate(() => {
-//     state.list = listsById.value[props.listId]
-// });
-
-// console.log("TaskList: listsByIdRef is ", JSON.stringify(listsById.value))
 </script>
 
 <template>

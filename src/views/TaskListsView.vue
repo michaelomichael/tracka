@@ -1,33 +1,19 @@
 <script setup>
 import { useBackendStore } from "../services/backendStore";
 import TaskList from "../components/TaskList.vue";
-import { storeToRefs } from "pinia";
-import { list } from "firebase/storage";
-import { onBeforeUpdate, reactive, watchEffect } from "vue";
+import { reactive, watchEffect } from "vue";
 
 const backendStore = useBackendStore();
-// const { listsById } = storeToRefs(backendStore)
 
-// console.log("TaskListsView: listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
 const state = reactive({
     isLoaded: false,
-    lists: [],
-    // lists: Object.values(listsById.value), // TODO: Is it ok to do this?
 })
 
 watchEffect(() => {
     if (backendStore.isLoaded) {
-        state.lists = Object.values(backendStore.listsById)
         state.isLoaded = true
     }
 })
-
-// onBeforeUpdate(() => {
-//     console.log("TaskListsView: onBeforeUpdate, listsByIdRef.value is ", JSON.stringify(listsById.value), JSON.stringify(Object.values(listsById.value)))
-//     console.log("TaskListsView: onBeforeUpdate, state.lists was ", JSON.stringify(state.lists))
-//     state.lists = Object.values(listsById.value)
-//     console.log("TaskListsView: onBeforeUpdate, state.lists is now ", JSON.stringify(state.lists))
-// });
 </script>
 
 <template>
@@ -37,7 +23,7 @@ watchEffect(() => {
 
             <section v-if="state.isLoaded">
                 <div class="flex ">
-                    <TaskList v-for="list in state.lists" :key="list.id" :listId="list.id" />
+                    <TaskList v-for="list in backendStore.lists" :key="list.id" :listId="list.id" />
                 </div>
             </section>
         </main>
