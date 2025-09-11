@@ -14,6 +14,10 @@ const props = defineProps({
         type: String,
         required: false,
     },
+    listId: {
+        type: String,
+        required: false,
+    },
 })
 
 const form = reactive({
@@ -39,7 +43,7 @@ watchEffect(() => {
                     id: null,
                     title: "",
                     description: "",
-                    listId: backendStore.newItemsList.id,
+                    listId: props.listId ?? backendStore.newItemsList.id,
                     parentTaskId: null,
                     childTaskIds: [],
                 }
@@ -52,6 +56,10 @@ watchEffect(() => {
             form.parentTaskId = state.task.parentTaskId;
 
             console.log("TaskEditView: got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
+        }
+
+        if (props.listId != null && state.task?.listId !== props.listId) {
+            state.task.listId = props.listId
         }
 
         state.parentTask = backendStore.getParentTaskForTask(state.task)
@@ -92,6 +100,16 @@ const handleSubmit = () => {
             <h2 class="text-3xl text-center font-semibold mb-6">{{ props.taskId == null ? "Create" : "Edit" }} Task</h2>
 
             <div class="mb-4">
+                <label for="listId" class="block text-gray-700 font-bold mb-2">List</label>
+                <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
+                    required>
+                    <option v-for="list in backendStore.lists" :key="list.id" :value="list.id">{{
+                        list.name }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="mb-4">
                 <label class="block text-gray-700 font-bold mb-2">Title</label>
                 <input v-model="form.title" type="text" id="title" name="title"
                     class="border rounded w-full py-2 px-3 mb-2" required />
@@ -100,16 +118,6 @@ const handleSubmit = () => {
                 <label for="description" class="block text-gray-700 font-bold mb-2">Description</label>
                 <textarea v-model="form.description" id="description" name="description"
                     class="border rounded w-full py-2 px-3" rows="4"></textarea>
-            </div>
-
-            <div class="mb-4">
-                <label for="listId" class="block text-gray-700 font-bold mb-2">List</label>
-                <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
-                    required>
-                    <option v-for="list in backendStore.lists" :key="list.id" :value="list.id">{{
-                        list.name }}
-                    </option>
-                </select>
             </div>
 
             <div class="mb-4">
@@ -134,12 +142,13 @@ const handleSubmit = () => {
                 </ul>
             </div>
 
-            <div>
+            <div class="flex gap-2 items-baseline">
                 <button
-                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full w-full focus:outline-none focus:shadow-outline"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
                     type="submit">
                     Save Task
                 </button>
+                <RouterLink to="/">Cancel</RouterLink>
             </div>
         </form>
     </section>

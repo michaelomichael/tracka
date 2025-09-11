@@ -8,11 +8,10 @@ import TaskEdit from "../components/TaskEdit.vue";
 const backendStore = useBackendStore();
 
 const route = useRoute()
-const taskId = route.params.taskId
-console.log("In TaskListsView, id is ", taskId)
 
 const state = reactive({
-    taskId: null,
+    editingTaskId: null,
+    newTaskListId: null,
     showEditor: false,
     isLoaded: false,
 })
@@ -27,9 +26,15 @@ watchEffect(() => {
 
 
     if (route.params.id != null) {
-        state.taskId = route.params.id
+        state.editingTaskId = route.params.id
     } else {
-        state.taskId = null
+        state.editingTaskId = null
+    }
+
+    if (route.query.listId != null) {
+        state.newTaskListId = route.query.listId
+    } else {
+        state.newTaskListId = null
     }
 })
 </script>
@@ -48,7 +53,7 @@ watchEffect(() => {
         <section v-if="state.showEditor" id="sidePanel"
             class="min-h-screen w-64 bg-gray-100 border-r border-gray-300 border-l-1 p-6">
             Side panel
-            <TaskEdit :taskId="state.taskId" />
+            <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
         </section>
     </div>
 </template>
