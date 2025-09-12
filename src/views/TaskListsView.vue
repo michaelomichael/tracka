@@ -40,8 +40,8 @@ watchEffect(() => {
 </script>
 
 <template>
-    <div class="flex w-full h-full">
-        <main class="flex-1 overflow-x-auto p-6 bg-white">
+    <div class="flex w-full h-full relative">
+        <main class="flex-1 xoverflow-x-scroll p-6 bg-white">
             <h2>Lists galore!</h2>
 
             <section v-if="state.isLoaded">
@@ -50,10 +50,13 @@ watchEffect(() => {
                 </div>
             </section>
         </main>
-        <section v-if="state.showEditor" id="sidePanel"
+        <section v-if="state.showEditor" id="editor-modal"
             class="min-h-screen w-64 bg-gray-100 border-r border-gray-300 border-l-1 p-6">
-            Side panel
-            <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
+            <div id="editor-background" class="absolute left-0 top-0 w-screen h-screen bg-black opacity-20"></div>
+            <div id="editor-modal" class="bg-white rounded-lg border-1 border-gray-600 absolute left-0 top-0">
+                <RouterLink to="/tasks">X</RouterLink>
+                <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
+            </div>
         </section>
     </div>
 </template>

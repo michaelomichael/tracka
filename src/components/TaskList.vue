@@ -27,11 +27,10 @@ watchEffect(() => {
 
 <template>
     <section v-if="state.isLoaded" class="bg-gray-400 rounded-xl w-70  p-4 m-10 relative">
-        <h2 class="text-xl font-semibold text-white text-center">{{ state.list.name }}</h2>
-        <RouterLink :to="`/tasks/new?listId=${state.list.id}`">
-            <button
-                class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4"><i
-                    class="pi pi-plus"></i></button>
+        <h2 class="bg-gray-400 sticky text-xl font-semibold text-white text-center">{{ state.list.name }}</h2>
+        <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
+            class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">
+            <i class="pi pi-plus"></i>
         </RouterLink>
         <TaskCard v-for="taskId in (state.list.taskIds || [])" :key="taskId" :taskId="taskId" />
     </section>
