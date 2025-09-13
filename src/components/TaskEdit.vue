@@ -25,6 +25,7 @@ const form = reactive({
     description: "",
     listId: "",
     parentTaskId: "",
+    isDone: false,
 });
 
 const state = reactive({
@@ -34,7 +35,7 @@ const state = reactive({
     isLoaded: false,
 })
 
-const listNavigationButtons = ["BACKLOG", "TODAY", "DONE"]
+const listNavigationButtons = []
 
 watchEffect(() => {
     if (backendStore.isLoaded) {
@@ -48,19 +49,25 @@ watchEffect(() => {
                     listId: props.listId ?? backendStore.newItemsList.id,
                     parentTaskId: null,
                     childTaskIds: [],
+                    isDone: false,
                 }
             } else {
                 state.task = backendStore.getTask(props.taskId)
             }
             form.title = state.task.title;
             form.description = state.task.description;
-            form.listId = state.task.listId;
+            form.isDone = state.task.isDone;
+            // The 'List' dropdown won't contain 'DONE', so set a sensible value
+            // for listId in case the task was originally done and the user then
+            // un-checks the checkbox.
+            form.listId = state.task.isDone ? 'TODAY' : state.task.listId;
             form.parentTaskId = state.task.parentTaskId;
 
             console.log("TaskEditView: got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
         }
 
         if (props.listId != null && state.task?.listId !== props.listId) {
+            // TODO: Shouldn't we be setting form.listId as well as (or instead of) this?
             state.task.listId = props.listId
         }
 
@@ -76,7 +83,8 @@ const handleSubmit = () => {
         id: state.task.id,
         title: form.title,
         description: form.description,
-        listId: form.listId,
+        isDone: form.isDone,
+        listId: form.isDone ? "DONE" : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
         childTaskIds: copy(state.task.childTaskIds),
     };
@@ -107,21 +115,26 @@ const setList = (listId) => {
 
         -->
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
-            <div class="mb-4">
-                <div class="flex gap-2">
-                    <!-- TODO: Might be nicer to have a checkbox for "done", plus arrows to move left and right. -->
-                    <!-- TODO: Consider having a separate "isDone" field, and a "move all done items to done" button -->
-                    <button v-for="listId of listNavigationButtons"
-                        :class="`text-sm text-white font-semibold bg-gray-400 cursor-pointer rounded-sm xbg-green-600 px-2 ${form.listId === listId ? 'bg-green-700' : ''}`"
-                        @click.prevent="setList(listId)">{{ backendStore.getList(listId).name }}</button>
-
-                    <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
-                        required>
-                        <option v-for="list in backendStore.lists" :key="list.id" :value="list.id">{{
-                            list.name }}
-                        </option>
-                    </select>
+            <div id="list" class="flex gap-2 xitems-baseline mb-4 items-stretch">
+                <div
+                    :class="`rounded-md border-1 px-2 py-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
+                    <input type="checkbox" id="done" v-model="form.isDone" />
+                    <label for="done">Done?</label>
                 </div>
+
+                <!-- TODO: Might be nicer to have a checkbox for "done", plus arrows to move left and right. -->
+                <!-- TODO: Consider having a separate "isDone" field, and a "move all done items to done" button -->
+                <!-- <button v-for="listId of listNavigationButtons"
+                        :class="`text-sm text-white font-semibold bg-gray-400 cursor-pointer rounded-sm xbg-green-600 px-2 ${form.listId === listId ? 'bg-green-700' : ''}`"
+                        @click.prevent="setList(listId)">{{ backendStore.getList(listId).name }}</button> -->
+
+                <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId"
+                    class="border rounded w-full py-2 px-3" required>
+                    <option v-for="list in backendStore.lists.filter(list => list.id !== 'DONE')" :key="list.id"
+                        :value="list.id">{{
+                            list.name }}
+                    </option>
+                </select>
             </div>
 
             <div class="mb-4">

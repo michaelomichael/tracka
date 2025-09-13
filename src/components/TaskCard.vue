@@ -29,7 +29,7 @@ watchEffect(async () => {
         state.childTasks = backendStore.getChildTasksForTask(state.task)
 
         state.progress =
-            state.childTasks.filter(childTask => childTask.listId === 'DONE').length /
+            state.childTasks.filter(childTask => childTask.isDone).length /
             state.childTasks.length
 
         state.isLoaded = true
@@ -47,9 +47,12 @@ watchEffect(async () => {
                     Parent: {{ state.parentTask.title }}
                 </RouterLink>
             </p>
-            <h3 class="text-lg font-semibold">{{ state.task.title }}</h3>
+            <h3 class="text-lg font-semibold">
+                <i v-if="state.task.isDone" class="pi pi-check-circle mr-1 bg-green-500 rounded-4xl" />
+                {{ state.task.title }}
+            </h3>
 
-            <p class="text-sm"> {{ state.task.description }} </p>
+            <p class=" text-sm"> {{ state.task.description }} </p>
 
             <div v-if="state.childTasks.length > 0" class="text-xs">
                 <ProgressBar class="mt-2" :progress="state.progress" />
