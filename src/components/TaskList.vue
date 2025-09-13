@@ -20,6 +20,7 @@ const state = reactive({
     searchString: null,
     taskIds: [],
     list: {},
+    isTaskBeingDraggedOver: false,
 })
 
 watchEffect(() => {
@@ -48,12 +49,47 @@ function taskMatches(task, searchStringLowerCase) {
     return task.title.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0 ||
         task.description.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0
 }
+
+function handleDragEnter(evt, item) {
+    state.isTaskBeingDraggedOver = true
+}
+
+function handleDragOver(evt, item) {
+    state.isTaskBeingDraggedOver = true
+}
+
+function handleDragLeave(evt, item) {
+    state.isTaskBeingDraggedOver = false
+}
+
+function handleDrop(evt, item) {
+    const taskId = evt.dataTransfer.getData('taskId')
+    console.log("TaskList.handleDrop: Task ID", taskId, evt)
+    state.isTaskBeingDraggedOver = false
+
+    const task = backendStore.getTask(taskId)
+    // TODO: updateTask should take an existing task (or taskId) plus an object with only those fields to be updated. 
+    // Could call it 'patch'?
+    backendStore.updateTask({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        parentTaskId: task.parentTaskId,
+        childTaskIds: task.childTaskIds,
+        isDone: task.isDone,
+        listId: state.list.id, // NEW
+    })
+}
 </script>
 
 <template>
     <section v-if="state.isLoaded && (state.taskIds.length > 0 || !state.isFiltered)"
-        class="bg-gray-400 rounded-xl w-70  p-4 m-6 relative">
-        <h2 class="bg-gray-400 sticky text-xl font-semibold text-white text-center">{{ state.list.name }}</h2>
+        @dragover.prevent="handleDragOver($event)" @dragenter.prevent="handleDragEnter($event)"
+        @dragleave.prevent="handleDragLeave($event)" @drop="handleDrop($event)"
+        :class="` rounded-xl w-70  p-4 m-6 relative ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
+        <h2
+            :class="`sticky text-xl font-semibold text-white text-center ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
+            {{ state.list.name }}</h2>
         <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
             class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">
             <i class="pi pi-plus"></i>

@@ -35,11 +35,18 @@ watchEffect(async () => {
         state.isLoaded = true
     }
 })
+
+function startDrag(evt) {
+    console.log("Starting to drag", evt)
+    evt.dataTransfer.dropEffect = 'move'
+    evt.dataTransfer.effectAllowed = 'move'
+    evt.dataTransfer.setData('taskId', state.task.id)
+}
 </script>
 
 <template>
-    <RouterLink :to="`/tasks/${taskId}/edit`">
-        <section v-if="state.isLoaded" class="bg-gray-100 hover:bg-gray-200 rounded-md my-4 border-2 p-4">
+    <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`" draggable @dragstart="startDrag($event)">
+        <section class="bg-gray-100 hover:bg-gray-200 rounded-md my-4 border-2 p-4">
             <p v-if="state.parentTask !== null" class="text-xs mb-2">
                 <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
                     class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"

@@ -288,7 +288,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       // TODO: check to see if the parent task's children are now all completed - if so, then
       //        we can set that parent task to DONE too.
 
-      // TODO: Transactions?
+      // TODO: Transactions? See https://firebase.google.com/docs/firestore/manage-data/transactions
       // TODO: check to see if children have changed (not supported by UI yet)
     } else {
       console.warn("BackendStore.updateTask: Didn't find an existing task for", taskId, newTask)
