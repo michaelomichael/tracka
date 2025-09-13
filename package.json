@@ -21,6 +21,7 @@
     "@capacitor/haptics": "7.0.2",
     "@capacitor/keyboard": "7.0.2",
     "@capacitor/status-bar": "7.0.2",
+    "@kouts/vue-modal": "^5.0.1",
     "@tailwindcss/vite": "^4.1.12",
     "firebase": "^12.2.1",
     "pinia": "^3.0.3",

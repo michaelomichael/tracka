@@ -34,6 +34,8 @@ const state = reactive({
     isLoaded: false,
 })
 
+const listNavigationButtons = ["BACKLOG", "TODAY", "DONE"]
+
 watchEffect(() => {
     if (backendStore.isLoaded) {
         if (state.task?.id !== props.taskId) {
@@ -90,38 +92,49 @@ const handleSubmit = () => {
 
     router.push("/");
 }
+
+const setList = (listId) => {
+    form.listId = listId
+}
 </script>
 
 <template>
     <section class="w-100 m-auto">
-        <h2>Edit task (#{{ props.taskId }})</h2>
+        <!-- TODO: Ditch the "Save" and "Close" buttons, and just save when a field loses focus? 
+                    What about new tasks, though? If you start creating a new task and then change your mind?
+                    I guess that we'd only save it if the fields are valid. (For now, that just means the title 
+                    has to be non-blank.)
 
+        -->
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
-            <h2 class="text-3xl text-center font-semibold mb-6">{{ props.taskId == null ? "Create" : "Edit" }} Task</h2>
-
             <div class="mb-4">
-                <label for="listId" class="block text-gray-700 font-bold mb-2">List</label>
-                <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
-                    required>
-                    <option v-for="list in backendStore.lists" :key="list.id" :value="list.id">{{
-                        list.name }}
-                    </option>
-                </select>
+                <div class="flex gap-2">
+                    <!-- TODO: Might be nicer to have a checkbox for "done", plus arrows to move left and right. -->
+                    <!-- TODO: Consider having a separate "isDone" field, and a "move all done items to done" button -->
+                    <button v-for="listId of listNavigationButtons"
+                        :class="`text-sm text-white font-semibold bg-gray-400 cursor-pointer rounded-sm xbg-green-600 px-2 ${form.listId === listId ? 'bg-green-700' : ''}`"
+                        @click.prevent="setList(listId)">{{ backendStore.getList(listId).name }}</button>
+
+                    <select v-model="form.listId" id="listId" name="listId" class="border rounded w-full py-2 px-3"
+                        required>
+                        <option v-for="list in backendStore.lists" :key="list.id" :value="list.id">{{
+                            list.name }}
+                        </option>
+                    </select>
+                </div>
             </div>
 
             <div class="mb-4">
-                <label class="block text-gray-700 font-bold mb-2">Title</label>
-                <input v-model="form.title" type="text" id="title" name="title"
+                <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
                     class="border rounded w-full py-2 px-3 mb-2" required />
             </div>
             <div class="mb-4">
-                <label for="description" class="block text-gray-700 font-bold mb-2">Description</label>
-                <textarea v-model="form.description" id="description" name="description"
+                <textarea v-model="form.description" id="description" name="description" placeholder="Description"
                     class="border rounded w-full py-2 px-3" rows="4"></textarea>
             </div>
 
-            <div class="mb-4">
-                <label for="parentTaskId" class="block text-gray-700 font-bold mb-2">Parent Task ID</label>
+            <div class="mb-4 flex gap-2 items-baseline">
+                <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent</label>
                 <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId"
                     class="border rounded w-full py-2 px-3">
                     <option value=""></option>

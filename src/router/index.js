@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import TaskListsView from '../views/TaskListsView.vue'
-import TaskEditView from '../views/TaskEditView.vue'
+import SearchTasksView from '../views/SearchTasksView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,12 +8,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      redirect: '/tasks',
+      component: TaskListsView,
     },
     {
       path: '/tasks',
-      name: 'task-lists',
-      component: TaskListsView,
+      name: 'tasks',
+      redirect: '/',
     },
     {
       path: '/tasks/:taskId/edit',
@@ -26,18 +25,10 @@ const router = createRouter({
       name: 'new-task',
       component: TaskListsView,
     },
-    // {
-    //   path: '/tasks/{id}',
-    //   name: 'task',
-    //   component: TaskView,
-    // },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/tasks/search',
+      name: 'search-for-tasks',
+      component: SearchTasksView,
     },
   ],
 })

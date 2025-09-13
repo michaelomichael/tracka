@@ -109,10 +109,8 @@ export const useBackendStore = defineStore('backendStore', () => {
   const _data = reactive({ listsById: {}, tasksById: {} })
   const lists = computed(() => Object.values(_data.listsById))
   const tasks = computed(() => Object.values(_data.tasksById))
-  const doneList = computed(() => single(lists.value, (list) => list.specialCategory === 'DONE'))
-  const newItemsList = computed(() =>
-    single(lists.value, (list) => list.specialCategory === 'NEW_ITEMS'),
-  )
+  const doneList = computed(() => _data.listsById.DONE)
+  const newItemsList = computed(() => _data.listsById.BACKLOG)
   const _status = reactive({
     lists: {
       unsubscribeCallback: null,
@@ -295,6 +293,16 @@ export const useBackendStore = defineStore('backendStore', () => {
     updateDoc(doc(db, 'tasks', taskId), newTask)
   }
 
+  function findTasks(searchString) {
+    _ensureLoaded()
+    const lowerCaseSearchString = searchString.toLocaleLowerCase()
+    return Object.values(this._data.tasksById).filter(
+      (task) =>
+        task.title.toLocaleLowerCase().indexOf(lowerCaseSearchString) >= 0 ||
+        task.description.toLocaleLowerCase().indexOf(lowerCaseSearchString) >= 0,
+    )
+  }
+
   return {
     _data,
     _status,
@@ -313,6 +321,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     updateList,
     updateTask,
     addTask,
+    findTasks,
   }
 })
 

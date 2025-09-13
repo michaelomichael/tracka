@@ -2,11 +2,12 @@
 import { useBackendStore } from "../services/backendStore";
 import TaskList from "../components/TaskList.vue";
 import { reactive, watchEffect } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import TaskEdit from "../components/TaskEdit.vue";
 
 const backendStore = useBackendStore();
 
+const router = useRouter()
 const route = useRoute()
 
 const state = reactive({
@@ -21,42 +22,45 @@ watchEffect(() => {
         state.isLoaded = true
     }
 
-    state.showEditor = route.name !== "task-lists"
+    state.showEditor = route.name !== "home"
     console.log("Route name is", route.name, "and showEditor=", state.showEditor)
 
 
-    if (route.params.id != null) {
-        state.editingTaskId = route.params.id
+    if (route.params.taskId != null) {
+        state.editingTaskId = route.params.taskId
     } else {
         state.editingTaskId = null
     }
+    console.log("TaskListsVue.watchEffect: Setting state.editingTaskId to", state.editingTaskId)
 
     if (route.query.listId != null) {
         state.newTaskListId = route.query.listId
     } else {
         state.newTaskListId = null
     }
+    console.log("TaskListsVue.watchEffect: Setting state.newTaskListid to", state.newTaskListId)
 })
+
+function handleModalClose(eventName, other) {
+    console.log("Closed modal, eventName was", eventName, state.showEditor, other)
+    router.push("/tasks")
+}
 </script>
 
 <template>
     <div class="flex w-full h-full relative">
-        <main class="flex-1 xoverflow-x-scroll p-6 bg-white">
-            <h2>Lists galore!</h2>
-
+        <main class="flex-1 xoverflow-x-scroll p-0 bg-white ">
             <section v-if="state.isLoaded">
                 <div class="flex ">
                     <TaskList v-for="list in backendStore.lists" :key="list.id" :listId="list.id" />
                 </div>
             </section>
         </main>
-        <section v-if="state.showEditor" id="editor-modal"
-            class="min-h-screen w-64 bg-gray-100 border-r border-gray-300 border-l-1 p-6">
-            <div id="editor-background" class="absolute left-0 top-0 w-screen h-screen bg-black opacity-20"></div>
-            <div id="editor-modal" class="bg-white rounded-lg border-1 border-gray-600 absolute left-0 top-0">
-                <RouterLink to="/tasks">X</RouterLink>
-                <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
-            </div>
-        </section>
+        <!-- Docs at https://next--vue-modal-demo.netlify.app/ -->
+        <Modal v-model="state.showEditor" :title="state.editingTaskId ? 'Edit Task' : 'Create Task'"
+            @closing="handleModalClose()" @before-close="handleModalClose()" @closed="handleModalClose()"
+            @update:modelValue="(x) => handleModalClose('update: modelValue', x)">
+            <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
+        </Modal>
     </div>
 </template>

@@ -29,7 +29,7 @@ watchEffect(async () => {
         state.childTasks = backendStore.getChildTasksForTask(state.task)
 
         state.progress =
-            state.childTasks.filter(childTask => childTask.listId === '1').length /
+            state.childTasks.filter(childTask => childTask.listId === 'DONE').length /
             state.childTasks.length
 
         state.isLoaded = true
