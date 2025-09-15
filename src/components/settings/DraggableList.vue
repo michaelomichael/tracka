@@ -2,7 +2,6 @@
 import { reactive, watchEffect } from 'vue';
 import { useBackendStore } from '../../services/backendStore';
 import ListDropZone from './ListDropZone.vue';
-import { list } from 'firebase/storage';
 import { useToast } from 'vue-toastification';
 
 const backendStore = useBackendStore()

@@ -104,6 +104,18 @@ const handleSubmit = () => {
 const setList = (listId) => {
     form.listId = listId
 }
+
+function handleDeleteChild(taskId) {
+    console.log("TaskEdit.handleDeleteChild: Requested to delete taskId", taskId)
+}
+
+function handleAddChild() {
+    console.log("TaskEdit.handleAddChild: Requested to add a child task")
+}
+
+function handlePromoteChild(taskId) {
+    console.log("TaskEdit.handlePromoteChild: Requested to promote taskId", taskId)
+}
 </script>
 
 <template>
@@ -162,10 +174,18 @@ const setList = (listId) => {
             <div class="mb-4" v-if="state.childTasks.length > 0">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
                 <ul id="childTasks">
-                    <li v-for="childTask in state.childTasks" :key="childTask.id">
+                    <li v-for="childTask in state.childTasks" :key="childTask.id" class="flex justify-between">
                         <RouterLink :to="`/tasks/${childTask.id}/edit`">{{ childTask.title }}</RouterLink>
+                        <div class="text-xs flex gap-1">
+                            <button title="Promote child to parent-less"
+                                @click.prevent="handlePromoteChild(childTask.id)"><i
+                                    class="pi pi-arrow-up"></i></button>
+                            <button title="Delete child task" @click.prevent="handleDeleteChild(childTask.id)"><i
+                                    class="pi pi-trash"></i></button>
+                        </div>
                     </li>
                 </ul>
+                <button @click.prevent="handleAddChild()"><i class="pi pi-file-plus"></i></button>
             </div>
 
             <div class="flex gap-2 items-baseline">
