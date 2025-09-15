@@ -7,6 +7,7 @@ import {
   updateDoc,
   setDoc,
   addDoc,
+  deleteDoc,
 } from 'firebase/firestore'
 import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
@@ -15,20 +16,18 @@ import { single } from './utils'
 
 const defaultData = {
   lists: {
-    1: {
-      id: '1',
+    DONE: {
+      id: 'DONE',
       name: 'Done',
-      specialCategory: 'DONE',
       taskIds: ['1000'],
     },
-    2: {
-      id: '2',
+    BACKLOG: {
+      id: 'BACKLOG',
       name: 'Backlog',
-      specialCategory: 'NEW_ITEMS',
       taskIds: ['2000', '3000'],
     },
-    3: {
-      id: '3',
+    TODAY: {
+      id: 'TODAY',
       name: 'Today',
       taskIds: [],
     },
@@ -38,25 +37,28 @@ const defaultData = {
       id: '1000',
       title: 'Default task #1',
       description: 'Description of default task #1',
-      listId: '1',
+      listId: 'DONE',
       parentTaskId: null,
       childTaskIds: [],
+      isDone: true,
     },
     2000: {
       id: '2000',
       title: 'Default task #2',
       description: 'Description of default task #2',
-      listId: '2',
+      listId: 'BACKLOG',
       parentTaskId: null,
       childTaskIds: ['3000'],
+      isDone: false,
     },
     3000: {
       id: '3000',
       title: 'Default task #3',
       description: 'Description of default task #3',
-      listId: '2',
+      listId: 'BACKLOG',
       parentTaskId: '2000',
       childTaskIds: [],
+      isDone: false,
     },
   },
 }
@@ -68,17 +70,12 @@ function addLotsOfTasks() {
       id: id,
       title: `Extra task #${index + 1}`,
       description: `Description of extra task #${index + 1}`,
-      listId: '3',
+      listId: 'BACKLOG',
       parentTaskId: null,
       childTaskIds: [],
+      isDone: false,
     })
     return id
-  })
-
-  setDoc(doc(db, 'lists', '3'), {
-    id: '3',
-    name: 'Today',
-    taskIds: ids,
   })
 }
 
@@ -107,7 +104,9 @@ const db = getFirestore(firebaseApp)
 
 export const useBackendStore = defineStore('backendStore', () => {
   const _data = reactive({ listsById: {}, tasksById: {} })
-  const lists = computed(() => Object.values(_data.listsById))
+  const lists = computed(() =>
+    Object.values(_data.listsById).toSorted((a, b) => (a.order > b.order ? 1 : -1)),
+  )
   const tasks = computed(() => Object.values(_data.tasksById))
   const doneList = computed(() => _data.listsById.DONE)
   const newItemsList = computed(() => _data.listsById.BACKLOG)
@@ -207,8 +206,65 @@ export const useBackendStore = defineStore('backendStore', () => {
     return task?.parentTaskId == null ? null : getTask(task.parentTaskId)
   }
 
+  function patchList(listIdOrObject, changes) {
+    const newOrOld = (fieldName, changes, oldObject) =>
+      changes[fieldName] !== undefined ? changes[fieldName] : oldObject[fieldName]
+
+    _ensureLoaded()
+    const originalList =
+      typeof listIdOrObject === 'string' ? getList(listIdOrObject) : listIdOrObject
+
+    if (originalList == null) {
+      throw ("patchList: can't find original list", listIdOrObject)
+    }
+
+    const newList = {
+      id: originalList.id,
+      name: newOrOld('name', changes, originalList),
+      order: newOrOld('order', changes, originalList),
+      taskIds: newOrOld('taskIds', changes, originalList),
+    }
+
+    updateList(newList)
+  }
+
   function updateList(newList) {
     updateDoc(doc(db, 'lists', newList.id), newList)
+  }
+
+  async function addList(newList) {
+    // TODO: Figure out what to do when we're offline: it won't create the ID
+    const newDocRef = doc(collection(db, 'lists'))
+    console.log('backendStore.addList: New document ID is ', newDocRef.id)
+    newList.id = newDocRef.id
+    await setDoc(newDocRef, newList)
+    // const newRef = await addDoc(collection(db, 'lists'), newList)
+
+    newList.taskIds.forEach((taskId) => {
+      const task = getTask(taskId)
+      patchTask(taskId, { listId: newList.id })
+    })
+
+    // TODO: Eventually, sort out mapping for any child tasks too
+
+    return newList.id
+  }
+
+  async function deleteList(listIdOrObject) {
+    _ensureLoaded()
+    const originalList =
+      typeof listIdOrObject === 'string' ? getList(listIdOrObject) : listIdOrObject
+
+    if (originalList == null) {
+      console.warn(
+        'backendStore.deleteList: Attempted to delete list ',
+        listIdOrObject,
+        'but it was null',
+      )
+      return
+    }
+
+    deleteDoc(doc(db, 'lists', originalList.id))
   }
 
   async function addTask(newTask) {
@@ -234,6 +290,30 @@ export const useBackendStore = defineStore('backendStore', () => {
     // TODO: Eventually, sort out mapping for any child tasks too
 
     return newTask.id
+  }
+
+  function patchTask(taskIdOrObject, changes) {
+    const newOrOld = (fieldName, changes, oldObject) =>
+      changes[fieldName] !== undefined ? changes[fieldName] : oldObject[fieldName]
+
+    _ensureLoaded()
+    const originalTask =
+      typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+
+    if (originalTask == null) {
+      throw ("patchList: can't find original task", taskIdOrObject)
+    }
+    const newTask = {
+      id: originalTask.id,
+      title: newOrOld('title', changes, originalTask),
+      description: newOrOld('description', changes, originalTask),
+      listId: newOrOld('listId', changes, originalTask),
+      parentTaskId: newOrOld('parentTaskId', changes, originalTask),
+      childTaskIds: newOrOld('childTaskIds', changes, originalTask),
+      isDone: newOrOld('isDone', changes, originalTask),
+    }
+
+    updateTask(newTask)
   }
 
   function updateTask(newTask) {
@@ -323,7 +403,11 @@ export const useBackendStore = defineStore('backendStore', () => {
     getParentAndChildTasksForTask,
     getChildTasksForTask,
     getParentTaskForTask,
+    patchList,
     updateList,
+    deleteList,
+    addList,
+    patchTask,
     updateTask,
     addTask,
     findTasks,

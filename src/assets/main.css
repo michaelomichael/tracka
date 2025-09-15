@@ -1,3 +1,39 @@
+@import './base.css';
 @import 'tailwindcss';
 @import 'primeicons/primeicons.css';
 @import '@kouts/vue-modal/dist/vue-modal.css';
+
+:root {
+  --color-button: var(--color-background-mute);
+  --color-button-hover: #eeccaa;
+}
+
+h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+button,
+input[type='submit'] {
+  border: 1px solid gray;
+  cursor: pointer;
+  border-radius: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background-color: var(--color-button);
+}
+
+button:hover,
+input[type='submit']:hover {
+  background-color: var(--color-button-hover);
+}
+
+h2.list {
+  font-size: 1rem;
+  font-weight: 500;
+}

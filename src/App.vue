@@ -16,6 +16,7 @@ onMounted(() => {
     <header class="flex bg-gray-900 m-0 px-4 py-1 items-baseline justify-between w-full">
         <nav class=" text-white text-sm flex gap-5">
             <RouterLink to="/">Home</RouterLink>
+            <RouterLink to="/settings">Settings</RouterLink>
             <RouterLink to="/tasks/new">New Task</RouterLink>
         </nav>
         <SearchBox />

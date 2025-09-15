@@ -49,6 +49,7 @@
     --color-text: var(--vt-c-text-dark-2);
   }
 }
+/*
 
 *,
 *::before,
@@ -84,3 +85,4 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+*/
