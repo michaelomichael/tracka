@@ -70,14 +70,8 @@ function handleDrop(evt, item) {
     const task = backendStore.getTask(taskId)
     // TODO: updateTask should take an existing task (or taskId) plus an object with only those fields to be updated. 
     // Could call it 'patch'?
-    backendStore.updateTask({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        parentTaskId: task.parentTaskId,
-        childTaskIds: task.childTaskIds,
-        isDone: task.isDone,
-        listId: state.list.id, // NEW
+    backendStore.patchTask(task, {
+        listId: state.list.id,
     })
 }
 </script>

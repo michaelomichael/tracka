@@ -29,6 +29,7 @@ const form = reactive({
 });
 
 const state = reactive({
+    isNew: true,
     task: null,
     parentTask: null,
     childTasks: [],
@@ -38,10 +39,12 @@ const state = reactive({
 const listNavigationButtons = []
 
 watchEffect(() => {
+    state.isNew = props.taskId == null
+
     if (backendStore.isLoaded) {
         if (state.task?.id !== props.taskId) {
             // Only init the form once
-            if (props.taskId == null) {
+            if (state.isNew) {
                 state.task = {
                     id: null,
                     title: "",
@@ -54,19 +57,20 @@ watchEffect(() => {
             } else {
                 state.task = backendStore.getTask(props.taskId)
             }
-            form.title = state.task.title;
-            form.description = state.task.description;
-            form.isDone = state.task.isDone;
+
+            form.title = state.task.title ?? "";
+            form.description = state.task.description ?? "";
+            form.isDone = state.task.isDone ?? false; // Fallback in case field is missing
             // The 'List' dropdown won't contain 'DONE', so set a sensible value
             // for listId in case the task was originally done and the user then
             // un-checks the checkbox.
             form.listId = state.task.isDone ? 'TODAY' : state.task.listId;
-            form.parentTaskId = state.task.parentTaskId;
+            form.parentTaskId = state.task.parentTaskId ?? null;
 
             console.log("TaskEditView: got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
         }
 
-        if (props.listId != null && state.task?.listId !== props.listId) {
+        if (state.isNew && props.listId != null && state.task?.listId !== props.listId) {
             // TODO: Shouldn't we be setting form.listId as well as (or instead of) this?
             state.task.listId = props.listId
         }
@@ -80,7 +84,6 @@ watchEffect(() => {
 const handleSubmit = () => {
     console.log("TaskEditView: Submitting")
     const updatedTask = {
-        id: state.task.id,
         title: form.title,
         description: form.description,
         isDone: form.isDone,
@@ -89,20 +92,15 @@ const handleSubmit = () => {
         childTaskIds: copy(state.task.childTaskIds),
     };
 
-    if (updatedTask.id === null) {
+    if (state.isNew) {
         backendStore.addTask(updatedTask)
         toast.success(`Created task '${updatedTask.title}'`);
     } else {
-        backendStore.updateTask(updatedTask);
+        backendStore.patchTask(state.task.id, updatedTask);
         toast.success(`Updated task '${updatedTask.title}'`);
     }
-    // TODO: clear the form?
 
     router.push("/");
-}
-
-const setList = (listId) => {
-    form.listId = listId
 }
 
 function handleDeleteChild(taskId) {
@@ -116,31 +114,49 @@ function handleAddChild() {
 function handlePromoteChild(taskId) {
     console.log("TaskEdit.handlePromoteChild: Requested to promote taskId", taskId)
 }
+
+function handleChange() {
+    if (state.isNew) {
+        console.log("TaskEdit.handleChange: Task has not yet been created, so won't auto-save")
+        return
+    }
+
+    const updatedTaskFields = {
+        title: form.title,
+        description: form.description,
+        isDone: form.isDone,
+        listId: form.isDone ? "DONE" : form.listId,
+        parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
+    };
+    console.log("TaskEdit.handleChange: updatedTaskFields is", updatedTaskFields)
+
+    backendStore.patchTask(state.task.id, updatedTaskFields);
+    toast.success(`Updated task '${updatedTaskFields.title}'`);
+}
+
 </script>
 
 <template>
     <section class="w-100 m-auto">
-        <!-- TODO: Ditch the "Save" and "Close" buttons, and just save when a field loses focus? 
-                    What about new tasks, though? If you start creating a new task and then change your mind?
-                    I guess that we'd only save it if the fields are valid. (For now, that just means the title 
-                    has to be non-blank.)
-
-        -->
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
-            <div id="list" class="flex gap-2 xitems-baseline mb-4 items-stretch">
+            <div id="buttons" v-if="state.isNew" class="flex gap-2 items-baseline mb-4">
+                <button
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
+                    type="submit">
+                    Create Task
+                </button>
+                <RouterLink to="/">Cancel</RouterLink>
+            </div>
+
+            <div id="list-selection" class="flex gap-2 mb-4 items-stretch">
                 <div
                     :class="`rounded-md border-1 px-2 py-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
-                    <input type="checkbox" id="done" v-model="form.isDone" />
+                    <input type="checkbox" id="done" v-model="form.isDone" @change="handleChange()"
+                        v-bind:autofocus="!state.isNew" />
                     <label for="done">Done?</label>
                 </div>
 
-                <!-- TODO: Might be nicer to have a checkbox for "done", plus arrows to move left and right. -->
-                <!-- TODO: Consider having a separate "isDone" field, and a "move all done items to done" button -->
-                <!-- <button v-for="listId of listNavigationButtons"
-                        :class="`text-sm text-white font-semibold bg-gray-400 cursor-pointer rounded-sm xbg-green-600 px-2 ${form.listId === listId ? 'bg-green-700' : ''}`"
-                        @click.prevent="setList(listId)">{{ backendStore.getList(listId).name }}</button> -->
-
-                <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId"
+                <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange()"
                     class="border rounded w-full py-2 px-3" required>
                     <option v-for="list in backendStore.lists.filter(list => list.id !== 'DONE')" :key="list.id"
                         :value="list.id">{{
@@ -149,29 +165,31 @@ function handlePromoteChild(taskId) {
                 </select>
             </div>
 
-            <div class="mb-4">
+            <div id="title-field" class="mb-4">
                 <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
-                    class="border rounded w-full py-2 px-3 mb-2" required />
-            </div>
-            <div class="mb-4">
-                <textarea v-model="form.description" id="description" name="description" placeholder="Description"
-                    class="border rounded w-full py-2 px-3" rows="4"></textarea>
+                    @change="handleChange()" class="border rounded w-full py-2 px-3 mb-2" required
+                    v-bind:autofocus="state.isNew" />
             </div>
 
-            <div class="mb-4 flex gap-2 items-baseline">
+            <div id="description-field" class="mb-4">
+                <textarea v-model="form.description" id="description" name="description" placeholder="Description"
+                    @change="handleChange()" class="border rounded w-full py-2 px-3" rows="4"></textarea>
+            </div>
+
+            <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline">
                 <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent</label>
-                <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId"
+                <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId" @change="handleChange()"
                     class="border rounded w-full py-2 px-3">
                     <option value=""></option>
                     <option
                         v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== props.taskId && state.task?.childTaskIds.indexOf(possibleParentTask.id) < 0)"
                         :key="parentTask.id" :value="parentTask.id">{{
-                            parentTask.title }}
+                        parentTask.title }}
                     </option>
                 </select>
             </div>
 
-            <div class="mb-4" v-if="state.childTasks.length > 0">
+            <div id="child-tasks-field" class="mb-4" v-if="state.childTasks.length > 0">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
                 <ul id="childTasks">
                     <li v-for="childTask in state.childTasks" :key="childTask.id" class="flex justify-between">
@@ -188,14 +206,6 @@ function handlePromoteChild(taskId) {
                 <button @click.prevent="handleAddChild()"><i class="pi pi-file-plus"></i></button>
             </div>
 
-            <div class="flex gap-2 items-baseline">
-                <button
-                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
-                    type="submit">
-                    Save Task
-                </button>
-                <RouterLink to="/">Cancel</RouterLink>
-            </div>
         </form>
     </section>
 </template>
