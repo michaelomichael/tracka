@@ -26,6 +26,7 @@ input[type='submit'] {
   border-radius: 0.3rem;
   padding: 0.2rem 0.6rem;
   background-color: var(--color-button);
+  color: var(--color-text);
 }
 
 button:hover,
