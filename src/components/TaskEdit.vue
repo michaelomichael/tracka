@@ -1,9 +1,10 @@
 <script setup>
-import { reactive, watchEffect } from "vue";
+import { reactive, watchEffect, computed } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
 import { copy } from "../services/utils";
+import TaskPickerCombo from "./TaskPickerCombo.vue";
 
 const backendStore = useBackendStore()
 const toast = useToast();
@@ -37,6 +38,7 @@ const state = reactive({
 })
 
 const listNavigationButtons = []
+
 
 watchEffect(() => {
     state.isNew = props.taskId == null
@@ -103,19 +105,23 @@ const handleSubmit = () => {
     router.push("/");
 }
 
-function handleDeleteChild(taskId) {
-    console.log("TaskEdit.handleDeleteChild: Requested to delete taskId", taskId)
+async function handleAddExistingTaskToChildTasks(childTaskId) {
+    console.log("TaskEdit.handleAddExistingTaskToChildTasks: Requested to add a child task with ID:", childTaskId)
+
+    state.task = await backendStore.patchTask(state.task, {
+        childTaskIds: [...state.task.childTaskIds, childTaskId]
+    })
 }
 
-function handleAddChild() {
-    console.log("TaskEdit.handleAddChild: Requested to add a child task")
+async function handlePromoteChildToParentless(childTaskIdToBePromoted) {
+    console.log("TaskEdit.handlePromoteChildToParentless: Requested to promote taskId", childTaskIdToBePromoted)
+
+    state.task = await backendStore.patchTask(state.task, {
+        childTaskIds: state.task.childTaskIds.filter(otherChildTaskId => otherChildTaskId !== childTaskIdToBePromoted)
+    })
 }
 
-function handlePromoteChild(taskId) {
-    console.log("TaskEdit.handlePromoteChild: Requested to promote taskId", taskId)
-}
-
-function handleChange() {
+async function handleChange() {
     if (state.isNew) {
         console.log("TaskEdit.handleChange: Task has not yet been created, so won't auto-save")
         return
@@ -130,9 +136,14 @@ function handleChange() {
     };
     console.log("TaskEdit.handleChange: updatedTaskFields is", updatedTaskFields)
 
-    backendStore.patchTask(state.task.id, updatedTaskFields);
+    await backendStore.patchTask(state.task.id, updatedTaskFields);
     toast.success(`Updated task '${updatedTaskFields.title}'`);
 }
+
+const excludedPotentialChildTaskIds = computed(() => {
+    backendStore.tasks.filter(task => task.parentId != null).map(task => task.id)
+        .concat(state.task.id)
+})
 
 </script>
 
@@ -149,15 +160,14 @@ function handleChange() {
             </div>
 
             <div id="list-selection" class="flex gap-2 mb-4 items-stretch">
-                <div
-                    :class="`rounded-md border-1 px-2 py-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
+                <div :class="`rounded-md border-1 p-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
                     <input type="checkbox" id="done" v-model="form.isDone" @change="handleChange()"
                         v-bind:autofocus="!state.isNew" />
                     <label for="done">Done?</label>
                 </div>
 
                 <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange()"
-                    class="border rounded w-full py-2 px-3" required>
+                    class="border rounded w-full p-2" required>
                     <option v-for="list in backendStore.lists.filter(list => list.id !== 'DONE')" :key="list.id"
                         :value="list.id">{{
                             list.name }}
@@ -167,43 +177,49 @@ function handleChange() {
 
             <div id="title-field" class="mb-4">
                 <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
-                    @change="handleChange()" class="border rounded w-full py-2 px-3 mb-2" required
+                    @change="handleChange()" class="border rounded w-full p-2 mb-2" required
                     v-bind:autofocus="state.isNew" />
             </div>
 
             <div id="description-field" class="mb-4">
                 <textarea v-model="form.description" id="description" name="description" placeholder="Description"
-                    @change="handleChange()" class="border rounded w-full py-2 px-3" rows="4"></textarea>
+                    @change="handleChange()" class="border rounded w-full p-2" rows="4"></textarea>
             </div>
 
             <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline">
                 <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent</label>
                 <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId" @change="handleChange()"
-                    class="border rounded w-full py-2 px-3">
+                    class="border rounded w-full p-2">
                     <option value=""></option>
                     <option
                         v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== props.taskId && state.task?.childTaskIds.indexOf(possibleParentTask.id) < 0)"
                         :key="parentTask.id" :value="parentTask.id">{{
-                        parentTask.title }}
+                            parentTask.title }}
                     </option>
                 </select>
             </div>
 
-            <div id="child-tasks-field" class="mb-4" v-if="state.childTasks.length > 0">
+            <div id="child-tasks-field" class="mb-4">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
-                <ul id="childTasks">
-                    <li v-for="childTask in state.childTasks" :key="childTask.id" class="flex justify-between">
-                        <RouterLink :to="`/tasks/${childTask.id}/edit`">{{ childTask.title }}</RouterLink>
-                        <div class="text-xs flex gap-1">
+                <ul id="childTasks" v-if="state.childTasks.length">
+                    <li v-for="childTask in state.childTasks" :key="childTask.id"
+                        class="flex bullets justify-between flex-nowrap items-baseline">
+                        <RouterLink :to="`/tasks/${childTask.id}/edit`" class="text-link">
+                            {{ childTask.title }}
+                        </RouterLink>
+                        <span class="text-xs flex gap-1">
                             <button title="Promote child to parent-less"
-                                @click.prevent="handlePromoteChild(childTask.id)"><i
+                                class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"
+                                @click.prevent=" handlePromoteChildToParentless(childTask.id)"><i
                                     class="pi pi-arrow-up"></i></button>
-                            <button title="Delete child task" @click.prevent="handleDeleteChild(childTask.id)"><i
-                                    class="pi pi-trash"></i></button>
-                        </div>
+
+                        </span>
                     </li>
                 </ul>
-                <button @click.prevent="handleAddChild()"><i class="pi pi-file-plus"></i></button>
+                <div>
+                    <TaskPickerCombo :excludedTaskIds="excludedPotentialChildTaskIds"
+                        @task-id-selected="handleAddExistingTaskToChildTasks" />
+                </div>
             </div>
 
         </form>

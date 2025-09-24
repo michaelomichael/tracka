@@ -3,6 +3,8 @@ import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './ProgressBar.vue';
 import { stringToHslColour } from '../services/utils';
+import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch'
+enableDragDropTouch()
 
 const backendStore = useBackendStore();
 
@@ -45,32 +47,31 @@ function startDrag(evt) {
 </script>
 
 <template>
-    <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`" draggable @dragstart="startDrag($event)">
-        <section class="bg-gray-100 hover:bg-gray-200 rounded-md my-4 border-2 p-4">
-            <p v-if="state.parentTask !== null" class="text-xs mb-2">
-                <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
-                    class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"
-                    :style="`background-color: ${stringToHslColour(state.parentTask.id)}`">
-                    Parent: {{ state.parentTask.title }}
-                </RouterLink>
-            </p>
-            <h3 class="text-lg font-semibold">
-                <i v-if="state.task.isDone" class="pi pi-check-circle mr-1 bg-green-500 rounded-4xl" />
-                {{ state.task.title }}
-            </h3>
+    <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`" draggable @dragstart="startDrag($event)"
+        class="block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4">
+        <p v-if="state.parentTask !== null" class="text-xs mb-2">
+            <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
+                class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"
+                :style="`background-color: ${stringToHslColour(state.parentTask.id)}`">
+                Parent: {{ state.parentTask.title }}
+            </RouterLink>
+        </p>
+        <h3 class="text-lg font-task-card-title">
+            <i v-if="state.task.isDone" class="pi pi-check-circle mr-1 bg-green-500 rounded-4xl" />
+            {{ state.task.title }}
+        </h3>
 
-            <p class=" text-sm"> {{ state.task.description }} </p>
+        <p class=" text-sm"> {{ state.task.description }} </p>
 
-            <div v-if="state.childTasks.length > 0" class="text-xs">
-                <ProgressBar class="mt-2" :progress="state.progress" />
-                <ul class="m-2 px-2">
-                    <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
-                        <RouterLink :to="`/tasks/${childTask.id}/edit`">
-                            {{ backendStore.getListForTask(childTask)?.name }} - {{ childTask.title }}
-                        </RouterLink>
-                    </li>
-                </ul>
-            </div>
-        </section>
+        <div v-if="state.childTasks.length > 0" class="text-xs">
+            <ProgressBar class="mt-2" :progress="state.progress" />
+            <ul class="m-2 px-2">
+                <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
+                    <RouterLink :to="`/tasks/${childTask.id}/edit`">
+                        {{ backendStore.getListForTask(childTask)?.name }} - {{ childTask.title }}
+                    </RouterLink>
+                </li>
+            </ul>
+        </div>
     </RouterLink>
 </template>

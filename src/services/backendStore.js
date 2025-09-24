@@ -147,43 +147,50 @@ export const useBackendStore = defineStore('backendStore', () => {
     }
   }
 
-  function getTask(taskId) {
+  function getTask(taskId, throwIfNotFound) {
     _ensureLoaded()
     const task = _data.tasksById[taskId]
     if (task == null) {
-      console.warn(`backendStore.getTask: Task id '${taskId}' was not found`)
-      return null
+      const message = `BackendStore.getTask: Task id '${taskId}' was not found`
+      if (throwIfNotFound) {
+        throw message
+      } else {
+        console.warn(message)
+        return null
+      }
     }
     return task
   }
 
-  function getList(listId) {
+  function getList(listId, throwIfNotFound) {
     _ensureLoaded()
     const list = _data.listsById[listId]
     if (list == null) {
-      console.warn(`backendStore.getList: List id '${listId}' was not found`)
-      return null
+      const message = `BackendStore.getList: List id '${listId}' was not found`
+      if (throwIfNotFound) {
+        throw message
+      } else {
+        console.warn(message)
+        return null
+      }
     }
     return list
   }
 
   function getListForTask(taskIdOrObject) {
     _ensureLoaded()
-    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
-    if (task === null) {
-      throw 'BackendStore.getListForTask: Task was null'
-    }
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
 
     if (task.listId === null) {
       throw `backendStore.getListForTask: Task id ${task.id} has no listId`
     }
 
-    return getList(task.listId)
+    return getList(task.listId, true)
   }
 
   function getParentAndChildTasksForTask(taskIdOrObject) {
     _ensureLoaded()
-    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
     return {
       parentTask: getParentTaskForTask(task),
       childTasks: getChildTasksForTask(task),
@@ -192,19 +199,22 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function getChildTasksForTask(taskIdOrObject) {
     _ensureLoaded()
-    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
     return (
       task?.childTaskIds
-        ?.map((childTaskId) => getTask(childTaskId))
+        ?.map((childTaskId) => getTask(childTaskId, true))
         ?.filter((childTask) => childTask != null) ?? []
     )
   }
 
   function getParentTaskForTask(taskIdOrObject) {
     _ensureLoaded()
-    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
-    return task?.parentTaskId == null ? null : getTask(task.parentTaskId)
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
+    return task?.parentTaskId == null ? null : getTask(task.parentTaskId, true)
   }
+
+  const _newOrOld = (fieldName, newObject, oldObject) =>
+    newObject[fieldName] !== undefined ? newObject[fieldName] : oldObject[fieldName]
 
   /**
    * Note that modifying the list's `taskIds` will not automatically
@@ -212,12 +222,9 @@ export const useBackendStore = defineStore('backendStore', () => {
    * `patchTask()` to do this.
    */
   function patchList(listIdOrObject, changes) {
-    const newOrOld = (fieldName, changes, oldObject) =>
-      changes[fieldName] !== undefined ? changes[fieldName] : oldObject[fieldName]
-
     _ensureLoaded()
     const originalList =
-      typeof listIdOrObject === 'string' ? getList(listIdOrObject) : listIdOrObject
+      typeof listIdOrObject === 'string' ? getList(listIdOrObject, true) : listIdOrObject
 
     if (originalList == null) {
       throw ("patchList: can't find original list", listIdOrObject)
@@ -225,9 +232,9 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     const newList = {
       id: originalList.id,
-      name: newOrOld('name', changes, originalList),
-      order: newOrOld('order', changes, originalList),
-      taskIds: newOrOld('taskIds', changes, originalList),
+      name: _newOrOld('name', changes, originalList),
+      order: _newOrOld('order', changes, originalList),
+      taskIds: _newOrOld('taskIds', changes, originalList),
     }
 
     return _saveList(newList)
@@ -237,7 +244,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     _data.listsById[newList.id] = newList
     updateDoc(doc(db, 'lists', newList.id), newList)
     // Return a fresh reactive copy
-    return getList(newList.id)
+    return getList(newList.id, true)
   }
 
   async function addList(newList) {
@@ -249,20 +256,15 @@ export const useBackendStore = defineStore('backendStore', () => {
     // const newRef = await addDoc(collection(db, 'lists'), newList)
 
     newList.taskIds.forEach((taskId) => {
-      const task = getTask(taskId)
-      if (task != null) {
-        patchTask(task, { listId: newList.id })
-      } else {
-        console.warn(
-          `BackendStore.addList: New list references taskId '${taskId}' which doesn't exist`,
-        )
-      }
+      const task = getTask(taskId, true)
+      task.listId = newList.id
+      _saveTask(task)
     })
 
     _data.listsById[newList.id] = newList
 
     // Return a fresh reactive copy
-    return getList(newList.id)
+    return getList(newList.id, true)
   }
 
   async function deleteList(listIdOrObject) {
@@ -287,130 +289,189 @@ export const useBackendStore = defineStore('backendStore', () => {
     delete _data.listsById[originalList.id]
   }
 
-  async function addTask(newTask) {
+  async function addTask(newFields) {
+    if (newFields.title == null || newFields.listId == null) {
+      throw 'BackendStore.addTask: You must specify at least a title and a listId!'
+    }
+
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'tasks'))
     console.log('BackendStore.addTask: New document ID is ', newDocRef.id)
-    newTask.id = newDocRef.id
+
+    const newTask = {
+      id: newDocRef.id,
+      listId: newFields.listId,
+      title: newFields.title,
+      description: newFields.description ?? '',
+      parentTaskId: newFields.parentTaskId ?? null,
+      childTaskIds: newFields.childTaskIds ?? [],
+      isDone: newFields.isDone ?? 'DONE' == newFields.listId,
+    }
+
     await setDoc(newDocRef, newTask)
-    // const newRef = await addDoc(collection(db, 'tasks'), newTask)
 
     // Add it to the local collection immediately so that we can reference it
     // in components without having to wait for the later "snapshot" change.
     this._data.tasksById[newTask.id] = newTask
 
-    const list = getList(newTask.listId)
-    patchList(list, {
-      taskIds: [newTask.id].concat(list.taskIds),
-    })
+    // Update links in the List
+    const list = getList(newTask.listId, true)
+    list.taskIds = [newTask.id, ...list.taskIds]
+    _saveList(list)
 
+    // Update links in the parent task (if any)
     const parentTask = getParentTaskForTask(newTask)
     if (parentTask != null) {
-      patchTask(parentTask, {
-        childTaskIds: (parentTask.childTaskIds ?? []).concat(newTask.id),
-      })
+      parentTask.childTaskIds = [...(parentTask.childTaskIds ?? []), newTask.id]
+      _saveTask(parentTask)
     }
 
-    // TODO: Eventually, sort out mapping for any child tasks too
+    // Update links in the child tasks (if any)
+    newTask.childTaskIds.forEach((childTaskId) => {
+      const childTask = getTask(childTaskId, true)
+      if (childTask.parentTaskId != null) {
+        throw `BackendStore.addTask: Trying to add child task '${childTaskId}' but that task already has a parent (id ${childTask.parentTaskId})`
+      }
+      // TODO: Other validation, e.g. make sure that the child task Id !== thisTaskId
+      childTask.parentTaskId = newTask.id
+      _saveTask(childTask)
+    })
 
     // Return a fresh copy (with proxy wrapper)
     return getTask(newTask.id)
   }
 
-  function patchTask(taskIdOrObject, changes) {
-    const newOrOld = (fieldName, changes, oldObject) =>
-      changes[fieldName] !== undefined ? changes[fieldName] : oldObject[fieldName]
-
+  async function patchTask(taskIdOrObject, changes) {
     _ensureLoaded()
     const originalTask =
-      typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+      typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
 
-    if (originalTask == null) {
-      throw ("BackendStore.patchTask: can't find original task", taskIdOrObject)
-    }
-    originalTask
     const newTask = {
       id: originalTask.id,
-      title: newOrOld('title', changes, originalTask),
-      description: newOrOld('description', changes, originalTask),
-      listId: newOrOld('listId', changes, originalTask),
-      parentTaskId: newOrOld('parentTaskId', changes, originalTask),
-      childTaskIds: newOrOld('childTaskIds', changes, originalTask),
-      isDone: newOrOld('isDone', changes, originalTask),
+      title: _newOrOld('title', changes, originalTask),
+      description: _newOrOld('description', changes, originalTask),
+      listId: _newOrOld('listId', changes, originalTask),
+      parentTaskId: _newOrOld('parentTaskId', changes, originalTask),
+      childTaskIds: _newOrOld('childTaskIds', changes, originalTask),
+      isDone: _newOrOld('isDone', changes, originalTask),
     }
 
-    return _saveTaskAndUpdateRelatedTasksAndLists(newTask)
+    const taskId = newTask.id
+
+    // Check to see if its list has changed
+    if (originalTask.listId !== newTask.listId) {
+      console.log(
+        `BackendStore.patchTask: Changing list from ${originalTask.listId} to ${newTask.listId}`,
+      )
+      const oldList = getList(originalTask.listId, true)
+      const newList = getList(newTask.listId, true)
+
+      oldList.taskIds = oldList.taskIds.filter((childTaskId) => childTaskId !== taskId)
+      _saveList(oldList)
+
+      newList.taskIds = [taskId, ...newList.taskIds]
+      _saveList(newList)
+    }
+
+    // Check to see if parent task has changed
+    if (originalTask.parentTaskId !== newTask.parentTaskId) {
+      console.log(
+        `BackendStore.patchTask: Changing parent task Id from ${originalTask.parentTaskId} to ${newTask.parentTaskId}`,
+      )
+
+      if (originalTask.parentTaskId != null) {
+        const oldParentTask = getTask(originalTask.parentTaskId, true)
+        oldParentTask.childTaskIds =
+          oldParentTask.childTaskIds?.filter((childTaskId) => childTaskId !== taskId) ?? []
+        _saveTask(oldParentTask)
+      }
+
+      if (newTask.parentTaskId != null) {
+        const newParentTask = getTask(newTask.parentTaskId, true)
+        newParentTask.childTaskIds = (newParentTask.childTaskIds ?? []).concat(taskId)
+        _saveTask(newParentTask)
+      }
+    }
+
+    // TODO: check to see if the parent task's children are now all completed - if so, then
+    //        we can set that parent task to DONE too.
+    const oldChildTaskIds = new Set(originalTask.childTaskIds)
+    const newChildTaskIds = new Set(newTask.childTaskIds)
+
+    // Find tasks which are no longer children of this task
+    oldChildTaskIds.difference(newChildTaskIds).forEach((oldChildTaskId) => {
+      const oldChildTask = getTask(oldChildTaskId, true)
+      if (oldChildTask.parentTaskId === taskId) {
+        console.log(
+          `BackendStore.patchTask: Task '${oldChildTask.title}' (${oldChildTaskId}) should no longer be a child of '${newTask.title}' - will make it an orphan`,
+        )
+        oldChildTask.parentTaskId = null
+        _saveTask(oldChildTask)
+      }
+    })
+
+    // Make sure all the new child tasks are all correctly assigned to this one
+    newChildTaskIds.forEach((newChildTaskId) => {
+      const newChildTask = getTask(newChildTaskId, true)
+      if (newChildTask.parentTaskId !== taskId) {
+        console.log(
+          `BackendStore.patchTask: Task '${newChildTask.title}' (${newChildTaskId}) should now be made a child of '${newTask.title}'`,
+        )
+        newChildTask.parentTaskId = taskId
+        _saveTask(newChildTask)
+      }
+    })
+
+    // TODO: Transactions? See https://firebase.google.com/docs/firestore/manage-data/transactions
+
+    return _saveTask(newTask)
   }
 
-  function _saveTaskAndUpdateRelatedTasksAndLists(newTask) {
-    const taskId = newTask.id
-    const oldTask = getTask(taskId)
-
-    if (oldTask != null) {
-      // Check to see if its list has changed
-      if (oldTask.listId !== newTask.listId) {
-        console.log(
-          `BackendStore._saveTaskAndUpdateRelatedTasksAndLists: Changing list from ${oldTask.listId} to ${newTask.listId}`,
-        )
-        const newList = getList(newTask.listId)
-        if (newList != null) {
-          console.log('Before, newList had ', JSON.stringify(newList.taskIds))
-          patchList(newList, {
-            taskIds: [taskId].concat(newList.taskIds),
-          })
-          console.log('After, newList has', JSON.stringify(newList.taskIds))
-          const oldList = getList(oldTask.listId)
-          if (oldList != null) {
-            console.log('Before, oldList had ', JSON.stringify(oldList.taskIds))
-            oldList.taskIds = oldList.taskIds.filter((otherTaskId) => otherTaskId !== taskId)
-            _saveList(oldList)
-            console.log('After, oldList has ', JSON.stringify(oldList.taskIds))
-          } else {
-            console.warn(
-              `BackendStore._saveTaskAndUpdateRelatedTasksAndLists: Couldn't find old list with id ${oldTask.listId} for task id ${taskId}`,
-            )
-          }
-        } else {
-          throw `Couldn't find new list with id ${newTask.listId} for task id ${taskId}`
-        }
-      }
-      // Check to see if parent has changed
-      if (oldTask.parentTaskId !== newTask.parentTaskId) {
-        console.log(
-          `BackendStore._saveTaskAndUpdateRelatedTasksAndLists: Changing parent task Id from ${oldTask.parentTaskId} to ${newTask.parentTaskId}`,
-        )
-        const oldParentTask = getTask(oldTask.parentTaskId)
-        if (oldParentTask != null) {
-          oldParentTask.patchTask(oldParentTask, {
-            childTaskIds:
-              oldParentTask.childTaskIds?.filter((otherTaskId) => otherTaskId !== taskId) ?? [],
-          })
-        }
-        const newParentTask = getTask(newTask.parentTaskId)
-        if (newParentTask != null) {
-          newParentTask.childTaskIds = (newParentTask.childTaskIds ?? []).concat(taskId)
-          _saveTaskAndUpdateRelatedTasksAndLists(newParentTask)
-        }
-      }
-
-      // TODO: check to see if the parent task's children are now all completed - if so, then
-      //        we can set that parent task to DONE too.
-
-      // TODO: Transactions? See https://firebase.google.com/docs/firestore/manage-data/transactions
-      // TODO: check to see if children have changed (not supported by UI yet)
-    } else {
-      console.warn(
-        "BackendStore._saveTaskAndUpdateRelatedTasksAndLists: Didn't find an existing task for",
-        taskId,
-        newTask,
-      )
-    }
-
-    updateDoc(doc(db, 'tasks', taskId), newTask)
-    _data.tasksById[newTask.id] = newTask
+  /**
+   * No frills save method: it takes the given object, updates it in the DB, makes sure that it's
+   * stored locally in _data, and returns that fresh reactive reference.
+   * It doesn't attempt to sync any child/parent task IDs, or list IDs.
+   */
+  function _saveTask(updatedTask) {
+    updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
+    _data.tasksById[updatedTask.id] = updatedTask
 
     // Return a fresh reactive copy
-    return getTask(newTask.id)
+    return getTask(updatedTask.id, true)
+  }
+
+  async function deleteTask(taskIdOrObject) {
+    _ensureLoaded()
+    const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
+
+    if (task == null) {
+      console.warn(
+        'BackendStore.deleteTask: Attempted to delete task ',
+        taskIdOrObject,
+        'but it was null',
+      )
+      return
+    }
+
+    if (task.childTaskIds.length > 0) {
+      throw ("BackendStore.deleteTask: Can't delete task", task, 'because it has children')
+    }
+
+    const list = getListForTask(task)
+
+    deleteDoc(doc(db, 'tasks', task.id))
+    delete _data.tasksById[task.id]
+
+    list.taskIds = list.taskIds.filter((otherTaskId) => otherTaskId !== task.id)
+    _saveList(list)
+
+    task.childTaskIds.forEach((childTaskId) => {
+      const childTask = getTask(childTaskId)
+      if (childTask != null) {
+        childTask.parentTaskId = null
+        _saveTask(childTask)
+      }
+    })
   }
 
   function findTasks(searchString) {
@@ -438,13 +499,12 @@ export const useBackendStore = defineStore('backendStore', () => {
     getParentAndChildTasksForTask,
     getChildTasksForTask,
     getParentTaskForTask,
-    patchList,
-    updateList: _saveList,
-    deleteList,
     addList,
-    patchTask,
-    _saveTaskAndUpdateRelatedTasksAndLists,
+    patchList,
+    deleteList,
     addTask,
+    patchTask,
+    deleteTask,
     findTasks,
   }
 })

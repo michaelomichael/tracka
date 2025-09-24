@@ -82,7 +82,7 @@ function handleDrop(evt, item) {
         @dragleave.prevent="handleDragLeave($event)" @drop="handleDrop($event)"
         :class="` rounded-xl w-70  p-4 m-6 relative ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
         <h2
-            :class="`sticky text-xl font-semibold text-white text-center ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
+            :class="`sticky top-0 text-xl font-semibold text-white text-center ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
             {{ state.list.name }}</h2>
         <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
             class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">

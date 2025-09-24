@@ -1,5 +1,10 @@
 {
   "appId": "vue.test.number3",
   "appName": "vue-test-number3",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false
+    }
+  }
 }

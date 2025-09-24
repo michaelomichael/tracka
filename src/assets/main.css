@@ -6,6 +6,17 @@
 :root {
   --color-button: var(--color-background-mute);
   --color-button-hover: #eeccaa;
+  --header-height: 2.2rem;
+}
+
+#app > header {
+  height: var(--header-height);
+}
+
+#app > main {
+  height: calc(100vh - var(--header-height));
+  width: 100vw;
+  overflow: auto;
 }
 
 h1 {
@@ -19,7 +30,7 @@ h2 {
   font-weight: 500;
 }
 
-button,
+button.standard-button,
 input[type='submit'] {
   border: 1px solid gray;
   cursor: pointer;
@@ -29,7 +40,7 @@ input[type='submit'] {
   color: var(--color-text);
 }
 
-button:hover,
+button.standard-button:hover,
 input[type='submit']:hover {
   background-color: var(--color-button-hover);
 }
@@ -37,4 +48,40 @@ input[type='submit']:hover {
 h2.list {
   font-size: 1rem;
   font-weight: 500;
+}
+
+.bg-task-card {
+  background-color: var(--color-gray-100);
+}
+a.bg-task-card:hover {
+  background-color: var(--color-gray-200);
+}
+
+border-color-task-card {
+  border-color: black;
+}
+
+.font-task-card-title {
+  --tw-font-weight: var(--font-weight-semibold) /* 600 */;
+  font-weight: var(--font-weight-semibold) /* 600 */;
+}
+
+.text-link {
+  color: blue;
+  text-decoration: underline;
+}
+
+li.flex.bullets {
+  position: relative;
+  padding-left: 1.2em; /* Make space for the bullet */
+}
+
+li.flex.bullets::before {
+  content: '•'; /* You can change this to any symbol */
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  color: black; /* Bullet color */
+  font-size: 1em;
+  line-height: 1;
 }
