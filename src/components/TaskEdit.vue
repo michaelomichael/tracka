@@ -140,11 +140,6 @@ async function handleChange() {
     toast.success(`Updated task '${updatedTaskFields.title}'`);
 }
 
-const excludedPotentialChildTaskIds = computed(() => {
-    backendStore.tasks.filter(task => task.parentId != null).map(task => task.id)
-        .concat(state.task.id)
-})
-
 </script>
 
 <template>
@@ -208,17 +203,18 @@ const excludedPotentialChildTaskIds = computed(() => {
                             {{ childTask.title }}
                         </RouterLink>
                         <span class="text-xs flex gap-1">
-                            <button title="Promote child to parent-less"
+                            <button title="Promote child to be parent-less"
                                 class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"
-                                @click.prevent=" handlePromoteChildToParentless(childTask.id)"><i
-                                    class="pi pi-arrow-up"></i></button>
-
+                                @click.prevent=" handlePromoteChildToParentless(childTask.id)">
+                                <i class="pi pi-angle-double-up"></i>
+                            </button>
                         </span>
                     </li>
                 </ul>
                 <div>
-                    <TaskPickerCombo :excludedTaskIds="excludedPotentialChildTaskIds"
-                        @task-id-selected="handleAddExistingTaskToChildTasks" />
+                    <TaskPickerCombo placeholder-text="Search for (or create) child task..."
+                        :excluded-task-ids="taskId == null ? [] : [taskId]" :exclude-done-tasks="true"
+                        :exclude-tasks-with-parents="true" @task-id-selected="handleAddExistingTaskToChildTasks" />
                 </div>
             </div>
 

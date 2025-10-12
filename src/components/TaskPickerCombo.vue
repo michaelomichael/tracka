@@ -3,21 +3,39 @@ import { computed, reactive } from 'vue';
 import { useBackendStore } from '../services/backendStore';
 
 /*
-This component renders as a textbox which allows you to select an existing task Id or to type in your own new one which
-will
-be created in the background (in the "backendStore.newTasksList" list).
+This component renders as a textbox which allows you to select an existing task Id or to type 
+in your own new one which will be created in the background (in the "backendStore.newTasksList" list).
 
 As you're typing, it'll display an autocomplete list with potential matches.
-If there are no _exact_ matches, then the first (default) item in the autocomplete list is `<The text you entered> (create
-task)`
-
-If the selected item is already a child of another task then we'll not let them select it.
+If there are no _exact_ matches, then the first (default) item in the autocomplete list is 
+`<The text you entered> (create task)`
 */
 const props = defineProps({
-    // TODO: Make these kebab-case
-    excludedTaskIds: Array,
-    hiddenTaskIds: Array,
-    includeDoneTasks: Boolean,
+    placeholderText: {
+        type: String,
+        required: false,
+        default: "",
+    },
+    excludeTasksWithParents: {
+        type: Boolean,
+        required: false,
+        default: false,
+    },
+    excludeTasksWithChildren: {
+        type: Boolean,
+        required: false,
+        default: false,
+    },
+    excludeDoneTasks: {
+        type: Boolean,
+        required: false,
+        default: false,
+    },
+    excludedTaskIds: {
+        type: Array,
+        required: false,
+        default: [],
+    },
 })
 
 const emit = defineEmits(["task-id-selected"])
@@ -40,12 +58,16 @@ const searchResults = computed(() => {
 
 
     const invalidTaskIds = new Set(props.excludedTaskIds ?? [])
-
     // TODO: Make this more efficient. Want to take the first 10 "normal" matches, excluding 
 
-
     const allMetaTasks = backendStore.tasks.map(task => {
-        if (task.isDone && !props.includeDoneTasks) {
+        if (task.isDone && props.excludeDoneTasks) {
+            return null
+        }
+        if (task.parentTaskId != null && props.excludeTasksWithParents) {
+            return null
+        }
+        if ((task.childTaskIds ?? []).length > 0 && props.excludeTasksWithChildren) {
             return null
         }
 
@@ -66,7 +88,6 @@ const searchResults = computed(() => {
         }
     }).filter(task => task != null)
 
-
     const validPartialMatches = allMetaTasks.filter(metaTask => metaTask.matchType === "PARTIAL" && !metaTask.isInvalid)
     const validFullMatches = allMetaTasks.filter(metaTask => metaTask.matchType === "FULL" && !metaTask.isInvalid)
 
@@ -79,17 +100,21 @@ const searchResults = computed(() => {
         isCreate: true,
     }
 
-    return [
-        fakeCreateNewMatch,
-        ...topTenMatches.map(match => (
-            {
-                taskId: match.task.id,
-                taskTitle: match.task.title,
-                listName: match.listName,
-                isCreate: false,
-            }
-        ))
-    ]
+    return {
+        numOverallMatches: validPartialMatches.length + validFullMatches.length,
+        numDisplayedMatches: topTenMatches.length,
+        items: [
+            fakeCreateNewMatch,
+            ...topTenMatches.map(match => (
+                {
+                    taskId: match.task.id,
+                    taskTitle: match.task.title,
+                    listName: match.listName,
+                    isCreate: false,
+                }
+            ))
+        ]
+    }
 })
 
 async function selectMatch(match) {
@@ -110,14 +135,15 @@ async function selectMatch(match) {
     state.searchTerm = ""
 }
 function selectHighlightedMatch() {
-    if (searchResults.value.length > 0 && state.highlightedMatchIndex < searchResults.value.length) {
-        const match = searchResults.value[state.highlightedMatchIndex]
+    const items = searchResults.value.items
+    if (items.length > 0 && state.highlightedMatchIndex < items.length) {
+        const match = items[state.highlightedMatchIndex]
         selectMatch(match)
     }
 }
 
 function highlightNextMatch() {
-    if (state.highlightedMatchIndex < searchResults.value.length - 1) {
+    if (state.highlightedMatchIndex < searchResults.value.items.length - 1) {
         state.highlightedMatchIndex++
     }
 }
@@ -135,12 +161,12 @@ function highlightPreviousMatch() {
             v-on:keydown.enter.prevent="selectHighlightedMatch()" v-on:keydown.down.prevent="highlightNextMatch()"
             v-on:keydown.up.prevent="highlightPreviousMatch()" class="w-full px-2 py-1 border-1 " />
 
-        <ul v-if="searchResults.length" class="border-1 border-gray-500">
-            <li class="px-1 font-semibold"> Showing {{ searchResults.length }} of {{ backendStore.tasks.length }}
+        <ul v-if="searchResults.items.length" class="border-1 border-gray-500">
+            <li class="px-1 font-semibold"> Showing {{ searchResults.items.length }} of {{ backendStore.tasks.length }}
                 matching
                 tasks
             </li>
-            <li v-for="(match, index) in searchResults" :key="match" @click="selectMatch(match)"
+            <li v-for="(match, index) in searchResults.items" :key="match" @click="selectMatch(match)"
                 :class="`flex justify-between border-t-1 border-t-gray-400 p-1 ${state.highlightedMatchIndex === index ? 'bg-amber-400' : ''}`">
                 <span>{{ match.taskTitle }} </span>
                 <span v-if="match.isCreate" class="text-sm bg-yellow-300 text-red-800 italic px-2 py-0.5">Create</span>

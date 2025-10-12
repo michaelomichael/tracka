@@ -21,6 +21,12 @@
   max-height: calc(100vh - var(--header-height));
 }
 
+.fully-centered-children {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 #app > main {
   xheight: calc(100vh - var(--header-height));
   xwidth: 100vw;

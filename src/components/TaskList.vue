@@ -83,7 +83,7 @@ function handleTaskOrderChanged() {
 
             <!-- "Add Task" button: -->
             <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
-                class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">
+                class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md absolute right-4 top-4">
                 <i class="pi pi-plus"></i>
             </RouterLink>
         </template>

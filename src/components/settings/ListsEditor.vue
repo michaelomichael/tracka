@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, watchEffect } from 'vue';
 import { useBackendStore } from '../../services/backendStore';
-import EditableList from './EditableList.vue';
+import ListEdit from './ListEdit.vue';
 import draggable from "vuedraggable";
 
 const backendStore = useBackendStore()
@@ -14,8 +14,6 @@ const state = reactive({
 watchEffect(() => {
     if (backendStore.isLoaded) {
         state.sortableListIds = backendStore.lists.map(list => list.id)
-        console.log("watcheffect: ", JSON.stringify(state.sortableListIds))
-
         state.isLoaded = true
     }
 })
@@ -52,7 +50,7 @@ async function handleNewList() {
         <draggable class="flex gap-2 items-stretch" v-model="state.sortableListIds" itemKey="this"
             @update="handleOrderChanged" animation="200" delay="1000" delayOnTouchOnly="true">
             <template #item="{ element }">
-                <EditableList :listId="element" class="min-w-40 w-40 snap-center" />
+                <ListEdit :listId="element" class="min-w-40 w-40 snap-center" />
             </template>
 
             <template #footer>
