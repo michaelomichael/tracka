@@ -3,8 +3,6 @@ import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './ProgressBar.vue';
 import { stringToHslColour } from '../services/utils';
-import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch'
-enableDragDropTouch()
 
 const backendStore = useBackendStore();
 
@@ -37,18 +35,12 @@ watchEffect(async () => {
         state.isLoaded = true
     }
 })
-
-function startDrag(evt) {
-    console.log("Starting to drag", evt)
-    evt.dataTransfer.dropEffect = 'move'
-    evt.dataTransfer.effectAllowed = 'move'
-    evt.dataTransfer.setData('taskId', state.task.id)
-}
 </script>
 
 <template>
-    <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`" draggable @dragstart="startDrag($event)"
-        class="block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4">
+    <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`"
+        class="block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4"
+        :data-task-id="taskId">
         <p v-if="state.parentTask !== null" class="text-xs mb-2">
             <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
                 class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"
@@ -61,7 +53,7 @@ function startDrag(evt) {
             {{ state.task.title }}
         </h3>
 
-        <p class=" text-sm"> {{ state.task.description }} </p>
+        <p class="text-sm"> {{ state.task.description }} </p>
 
         <div v-if="state.childTasks.length > 0" class="text-xs">
             <ProgressBar class="mt-2" :progress="state.progress" />

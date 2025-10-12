@@ -1,4 +1,5 @@
 <script setup>
+import draggable from "vuedraggable";
 import TaskCard from './TaskCard.vue';
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
@@ -18,9 +19,8 @@ const state = reactive({
     isLoaded: false,
     isFiltered: false,
     searchString: null,
-    taskIds: [],
+    taskIdsSortableList: [],
     list: {},
-    isTaskBeingDraggedOver: false,
 })
 
 watchEffect(() => {
@@ -33,14 +33,15 @@ watchEffect(() => {
             state.isFiltered = true
             state.searchString = searchString
             const searchStringLowerCase = searchString.toLocaleLowerCase()
-            state.taskIds = state.list.taskIds.filter(taskId =>
+            state.taskIdsSortableList = state.list.taskIds.filter(taskId =>
                 taskMatches(backendStore.getTask(taskId), searchStringLowerCase)
             )
         } else {
             state.isFiltered = false
             state.searchString = null
-            state.taskIds = state.list.taskIds
+            state.taskIdsSortableList = state.list.taskIds; // v-model won't change the original state.list.taskIds :)
         }
+
         state.isLoaded = true
     }
 })
@@ -50,44 +51,87 @@ function taskMatches(task, searchStringLowerCase) {
         task.description.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0
 }
 
-function handleDragEnter(evt, item) {
-    state.isTaskBeingDraggedOver = true
+function handleTaskMovedToThisList(evt) {
+    const taskId = evt.clone.getAttribute("data-task-id");
+    console.log(`TaskList[${props.listId}].handleTaskMovedToThisList: taskId=`, taskId);
+
+    // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
+    // albeit the task will be inserted at the start of the new list.
+    backendStore.patchTask(taskId, { listId: props.listId });
+
+    // Now set the correct order of tasks in the new list.
+    backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
-function handleDragOver(evt, item) {
-    state.isTaskBeingDraggedOver = true
+function handleTaskOrderChanged() {
+    console.log(`TaskList[${props.listId}].handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
+    backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
-function handleDragLeave(evt, item) {
-    state.isTaskBeingDraggedOver = false
-}
-
-function handleDrop(evt, item) {
-    const taskId = evt.dataTransfer.getData('taskId')
-    console.log("TaskList.handleDrop: Task ID", taskId, evt)
-    state.isTaskBeingDraggedOver = false
-
-    const task = backendStore.getTask(taskId)
-    // TODO: updateTask should take an existing task (or taskId) plus an object with only those fields to be updated. 
-    // Could call it 'patch'?
-    backendStore.patchTask(task, {
-        listId: state.list.id,
-    })
-}
 </script>
 
 <template>
-    <section v-if="state.isLoaded && (state.taskIds.length > 0 || !state.isFiltered)"
-        @dragover.prevent="handleDragOver($event)" @dragenter.prevent="handleDragEnter($event)"
-        @dragleave.prevent="handleDragLeave($event)" @drop="handleDrop($event)"
-        :class="` rounded-xl w-70  p-4 m-6 relative ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
-        <h2
-            :class="`sticky top-0 text-xl font-semibold text-white text-center ${state.isTaskBeingDraggedOver ? 'bg-amber-400' : 'bg-gray-400'}`">
-            {{ state.list.name }}</h2>
-        <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
-            class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">
-            <i class="pi pi-plus"></i>
-        </RouterLink>
-        <TaskCard v-for="taskId in (state.taskIds || [])" :key="taskId" :taskId="taskId" />
-    </section>
+    <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
+        class="rounded-xl w-70 min-w-70 p-4 m-6 relative bg-gray-400 snap-center" :data-list-id="props.listId"
+        v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
+        @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="1000"
+        delayOnTouchOnly="true">
+        <template #header>
+            <h2 class="sticky top-0 text-xl font-semibold text-white text-center bg-gray-400">
+                {{ state.list.name }}
+            </h2>
+
+            <!-- "Add Task" button: -->
+            <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
+                class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 px-1 rounded-md absolute right-4 top-4">
+                <i class="pi pi-plus"></i>
+            </RouterLink>
+        </template>
+        <template #item="{ element }">
+            <TaskCard :taskId="element" />
+        </template>
+    </draggable>
 </template>
+
+<style scoped>
+.flip-list-move {
+    transition: transform 0.5s;
+}
+
+.no-move {
+    transition: transform 0s;
+}
+
+/* Styles for the placeholder spot where the dragged item would be inserted into the list if it were to be 
+   dropped at its current coordinates */
+.sortable-ghost {
+    background: transparent !important;
+    color: transparent;
+    outline-offset: 1px;
+    outline-width: 3px;
+    outline-style: dashed;
+    outline-color: black;
+    /* TODO: Different colours for when it's dark mode */
+}
+
+.sortable-ghost * {
+    opacity: 0;
+}
+
+.sortable-fallback {
+    opacity: 0.5;
+    background: aliceblue !important;
+}
+
+.xsortable-chosen {
+    opacity: 0.5;
+    background: red !important;
+}
+
+/* Styles for the item when it's being dragged around the screen */
+.sortable-drag {
+    opacity: 0.7;
+    xtransform: scale(0.5) !important;
+    background: orange !important;
+}
+</style>

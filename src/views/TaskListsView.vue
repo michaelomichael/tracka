@@ -48,19 +48,13 @@ function handleModalClose(eventName, other) {
 </script>
 
 <template>
-    <div class="flex w-full h-full relative">
-        <main class="flex-1 xoverflow-x-scroll p-0 bg-white ">
-            <section v-if="state.isLoaded">
-                <div class="flex ">
-                    <TaskList v-for="list in backendStore.lists" :key="list.id" :listId="list.id" />
-                </div>
-            </section>
-        </main>
+    <section class="flex w-screen">
+        <TaskList v-if="state.isLoaded" v-for="list in backendStore.lists" :key="list.id" :listId="list.id" />
         <!-- Docs at https://next--vue-modal-demo.netlify.app/ -->
         <Modal v-model="state.showEditor" :title="state.editingTaskId ? 'Edit Task' : 'Create Task'"
             @closing="handleModalClose()" @before-close="handleModalClose()" @closed="handleModalClose()"
             @update:modelValue="(x) => handleModalClose('update: modelValue', x)">
             <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
         </Modal>
-    </div>
+    </section>
 </template>
