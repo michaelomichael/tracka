@@ -31,3 +31,6 @@ coverage
 
 firebaseCredentials.json
 android/*
+!android/app/src/main/AndroidManifest.xml
+!android/app/src/main/res/values/colors.xml
+!android/app/src/main/res/values/styles.xml

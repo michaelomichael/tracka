@@ -22,7 +22,6 @@ const state = reactive({
 })
 
 watchEffect(async () => {
-    console.log("TaskCard.updateState: backendStore.isLoaded = ", JSON.stringify(backendStore.isLoaded))
     if (backendStore.isLoaded) {
         state.task = backendStore.getTask(props.taskId);
         state.parentTask = backendStore.getParentTaskForTask(state.task)
@@ -59,6 +58,7 @@ watchEffect(async () => {
             <ProgressBar class="mt-2" :progress="state.progress" />
             <ul class="m-2 px-2">
                 <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
+                    <!-- TODO: Add an icon beside each one if it's done -->
                     <RouterLink :to="`/tasks/${childTask.id}/edit`">
                         {{ backendStore.getListForTask(childTask)?.name }} - {{ childTask.title }}
                     </RouterLink>

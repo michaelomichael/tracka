@@ -55,9 +55,12 @@ function handleTaskMovedToThisList(evt) {
     const taskId = evt.clone.getAttribute("data-task-id");
     console.log(`TaskList[${props.listId}].handleTaskMovedToThisList: taskId=`, taskId);
 
+    // If this is the DONE list, then we want to make sure that the task's `isDone` flag
+    // is set to true. In other cases, make sure it's set to false.
+    // 
     // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
     // albeit the task will be inserted at the start of the new list.
-    backendStore.patchTask(taskId, { listId: props.listId });
+    backendStore.patchTask(taskId, { listId: props.listId, isDone: props.listId === "DONE" });
 
     // Now set the correct order of tasks in the new list.
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
@@ -67,15 +70,24 @@ function handleTaskOrderChanged() {
     console.log(`TaskList[${props.listId}].handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
-
+function handleDragStart() {
+    console.log(`TaskList[${props.listId}].handleDragStart`)
+    document.body.classList.add("dragging")
+}
+function handleDragEnd() {
+    console.log(`TaskList[${props.listId}].handleDragEnd`)
+    document.body.classList.remove("dragging")
+}
+// TODO: Make the `snap-center` work when dragging
 </script>
 
 <template>
     <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
-        class="rounded-xl w-70 min-w-70 p-4 m-6 relative bg-gray-400 snap-center" :data-list-id="props.listId"
+        class="rounded-xl w-70 min-w-70 p-4 m-6 relative bg-gray-400 xsnap-center" :data-list-id="props.listId"
         v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
-        @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="1000"
-        delayOnTouchOnly="true">
+        @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
+        delayOnTouchOnly="true" forceAutoScrollFallback="true" xforceFallback="true" xscrollSensitivity="360"
+        xscrollSpeed="460" revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
         <template #header>
             <h2 class="sticky top-0 text-xl font-semibold text-white text-center bg-gray-400">
                 {{ state.list.name }}
@@ -132,6 +144,7 @@ function handleTaskOrderChanged() {
 .sortable-drag {
     opacity: 0.7;
     xtransform: scale(0.5) !important;
+    cursor: move;
     background: orange !important;
 }
 </style>

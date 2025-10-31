@@ -23,8 +23,7 @@ watchEffect(() => {
     }
 
     state.showEditor = route.name !== "home"
-    console.log("Route name is", route.name, "and showEditor=", state.showEditor)
-
+    console.log("TaskListsVue.watchEffect: Route name is", route.name, "and showEditor=", state.showEditor)
 
     if (route.params.taskId != null) {
         state.editingTaskId = route.params.taskId
@@ -42,7 +41,6 @@ watchEffect(() => {
 })
 
 function handleModalClose(eventName, other) {
-    console.log("Closed modal, eventName was", eventName, state.showEditor, other)
     router.push("/tasks")
 }
 </script>

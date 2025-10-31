@@ -33,7 +33,7 @@ onMounted(() => {
         </header>
 
         <main
-            class="h-screen-minus-header max-h-screen-minus-header w-screen max-w-screen overflow-auto scroll-smooth snap-x snap-mandatory">
+            class="h-screen-minus-header max-h-screen-minus-header w-screen max-w-screen overflow-auto xscroll-smooth xsnap-x xsnap-mandatory">
             <RouterView />
         </main>
     </div>

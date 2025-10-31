@@ -53,9 +53,12 @@ const searchResults = computed(() => {
     state.highlightedMatchIndex = 0
 
     if (searchTerm === "") {
-        return []
+        return {
+            numOverallMatches: 0,
+            numDisplayedMatches: 0,
+            items: [],
+        }
     }
-
 
     const invalidTaskIds = new Set(props.excludedTaskIds ?? [])
     // TODO: Make this more efficient. Want to take the first 10 "normal" matches, excluding 

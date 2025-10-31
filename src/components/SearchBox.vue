@@ -11,13 +11,13 @@ const state = reactive({
 
 watchEffect(() => {
     const urlSearchString = route.query.search ?? ""
-    console.log("UrlSearchString is ", urlSearchString)
+    console.log(`SearchBox.watchEffect: urlSearchString is '${urlSearchString}'`)
     const formSearchString = state.searchString.trim()
     state.isSearchActive = urlSearchString.length > 0
 })
 
 function handleSubmit() {
-    console.log("Submitted", state.searchString)
+    console.log(`SearchBox.handleSubmit: searchString is '${state.searchString}'`)
     const submittedSearchString = state.searchString.trim()
     if (submittedSearchString.length > 0) {
         router.push({

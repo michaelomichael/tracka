@@ -27,11 +27,9 @@
   align-items: center;
 }
 
-#app > main {
-  xheight: calc(100vh - var(--header-height));
-  xwidth: 100vw;
-  xmax-width: 100vw;
-  xoverflow-y: auto;
+body.dragging main {
+  /* Snap prevents scrolling when we're dragging between lists */
+  scroll-snap-type: none !important;
 }
 
 h1 {

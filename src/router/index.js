@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import TaskListsView from '../views/TaskListsView.vue'
 import SearchTasksView from '../views/SearchTasksView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
+
+if (Capacitor.isNativePlatform()) {
+  await StatusBar.setOverlaysWebView({ overlay: false })
+  StatusBar.setBackgroundColor({ color: '#000000' })
+  StatusBar.setStyle({ style: Style.Dark })
+  await StatusBar.show()
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
