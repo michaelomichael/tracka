@@ -203,7 +203,7 @@ async function handleChange() {
                             {{ childTask.title }}
                         </RouterLink>
                         <span class="text-xs flex gap-1">
-                            <button title="Promote child to be parent-less"
+                            <button type="button" title="Promote child to be parent-less"
                                 class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"
                                 @click.prevent=" handlePromoteChildToParentless(childTask.id)">
                                 <i class="pi pi-angle-double-up"></i>

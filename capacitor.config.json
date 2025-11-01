@@ -1,6 +1,6 @@
 {
-  "appId": "vue.test.number3",
-  "appName": "vue-test-number3",
+  "appId": "dev.michaelomichael.tracka",
+  "appName": "Tracka",
   "webDir": "dist",
   "plugins": {
     "StatusBar": {
