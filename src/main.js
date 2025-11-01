@@ -15,10 +15,16 @@ app.use(Toast, {
   toastDefaults: {
     [TYPE.ERROR]: {
       timeout: 10000,
-      closeButton: true,
+      closeButton: 'button',
+      hideProgressBar: true,
+    },
+    [TYPE.WARNING]: {
+      timeout: 4000,
+      closeButton: 'button',
+      hideProgressBar: true,
     },
     [TYPE.SUCCESS]: {
-      timeout: 2000,
+      timeout: 3000,
       hideProgressBar: true,
     },
   },

@@ -89,7 +89,7 @@ const handleSubmit = () => {
         title: form.title,
         description: form.description,
         isDone: form.isDone,
-        listId: form.isDone ? "DONE" : form.listId,
+        listId: form.isDone ? backendStore.doneList.id : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
         childTaskIds: copy(state.task.childTaskIds),
     };
@@ -131,7 +131,7 @@ async function handleChange() {
         title: form.title,
         description: form.description,
         isDone: form.isDone,
-        listId: form.isDone ? "DONE" : form.listId,
+        listId: form.isDone ? backendStore.doneList.id : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
     };
     console.log("TaskEdit.handleChange: updatedTaskFields is", updatedTaskFields)
@@ -163,8 +163,8 @@ async function handleChange() {
 
                 <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange()"
                     class="border rounded w-full p-2" required>
-                    <option v-for="list in backendStore.lists.filter(list => list.id !== 'DONE')" :key="list.id"
-                        :value="list.id">{{
+                    <option v-for="list in backendStore.lists.filter(list => list.id !== backendStore.doneList.id)"
+                        :key="list.id" :value="list.id">{{
                             list.name }}
                     </option>
                 </select>

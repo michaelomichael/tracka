@@ -6,13 +6,18 @@ import {
   onSnapshot,
   updateDoc,
   setDoc,
-  addDoc,
   deleteDoc,
+  query,
+  where,
 } from 'firebase/firestore'
 import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { single } from './utils'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { useLogger } from './useLogger'
+
+const { log, info, warn } = useLogger('BackendStore')
 
 const defaultData = {
   lists: {
@@ -85,7 +90,7 @@ async function repopulateCollection(collectionType) {
   await Promise.all(deletions)
 
   const writes = Object.values(defaultData[collectionType]).map((item) =>
-    setDoc(doc(db, collectionType, item.id), item),
+    setDoc(doc(db, collectionType, item.id), { ownerId: getAuth().currentUser.uid, ...item }),
   )
   await Promise.all(writes)
 }
@@ -108,9 +113,18 @@ export const useBackendStore = defineStore('backendStore', () => {
     Object.values(_data.listsById).toSorted((a, b) => (a.order > b.order ? 1 : -1)),
   )
   const tasks = computed(() => Object.values(_data.tasksById))
-  const doneList = computed(() => _data.listsById.DONE)
-  const newItemsList = computed(() => _data.listsById.BACKLOG)
+
+  const doneList = computed(() =>
+    single(Object.values(_data.listsById), (list) => list.specialCategory === 'DONE'),
+  )
+
+  const newItemsList = computed(() =>
+    single(Object.values(_data.listsById), (list) => list.specialCategory === 'TODAY'),
+  )
+
   const _status = reactive({
+    overallStatus: 'NOT_STARTED',
+    currentUserId: null,
     lists: {
       unsubscribeCallback: null,
       isLoaded: false,
@@ -120,25 +134,77 @@ export const useBackendStore = defineStore('backendStore', () => {
       isLoaded: false,
     },
   })
-  const isLoaded = computed(() => _status.lists.isLoaded && _status.tasks.isLoaded)
+
+  const isLoaded = computed(() => _status.overallStatus === 'LOADING_COMPLETE')
 
   // Sync Firestore -> Pinia
   const init = () => {
-    for (let collectionType of ['lists', 'tasks']) {
-      const entityStatus = _status[collectionType]
-
-      if (entityStatus.unsubscribeCallback === null) {
-        // avoid duplicate listeners
-        entityStatus.unsubscribeCallback = onSnapshot(
-          collection(db, collectionType),
-          (snapshot) => {
-            console.log('Snapshot')
-            handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
-            entityStatus.isLoaded = true
-          },
-        )
-      }
+    if (_status.overallStatus !== 'NOT_STARTED') {
+      warn(`[BackendStore]: init() was called when overallStatus was '${_status.overallStatus}'`)
+      return
     }
+
+    _status.overallStatus = 'WAITING_FOR_USER_LOGIN'
+
+    onAuthStateChanged(getAuth(), (user) => {
+      if (!user) {
+        log('[BackendStore]: User has logged out, so clearing caches.')
+        _data.listsById = {}
+        _data.tasksById = {}
+
+        for (let collectionType of ['lists', 'tasks']) {
+          const entityStatus = _status[collectionType]
+          entityStatus.isLoaded = false
+          if (entityStatus.unsubscribeCallback) {
+            entityStatus.unsubscribeCallback()
+            entityStatus.unsubscribeCallback = null
+          }
+        }
+
+        _status.currentUserId = null
+        _status.overallStatus = 'WAITING_FOR_USER_LOGIN'
+        return
+      }
+
+      if (_status.currentUserId !== null && user.uid === _status.currentUserId) {
+        warn('onAuthStateChanged, but userId is the same as current stored one', user)
+        return
+      }
+
+      _status.currentUserId = user.uid
+      _status.overallStatus = 'LOADING_DOCUMENTS_FOR_USER'
+
+      for (let collectionType of ['lists', 'tasks']) {
+        const entityStatus = _status[collectionType]
+
+        // avoid duplicate listeners
+        if (entityStatus.unsubscribeCallback === null) {
+          entityStatus.unsubscribeCallback = onSnapshot(
+            //collection(db, collectionType),
+            query(collection(db, collectionType), where('ownerId', '==', user.uid)),
+            async (snapshot) => {
+              log('Snapshot')
+              handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
+              entityStatus.isLoaded = true
+
+              if (collectionType === 'lists') {
+                if (_status.overallStatus === 'LOADING_DOCUMENTS_FOR_USER') {
+                  _status.overallStatus = 'CHECKING_FOR_DEFAULT_LISTS'
+                  await _createDefaultListsIfNecessary(snapshot)
+                  _status.overallStatus = 'WAITING_FOR_ENTITY_LOADING_TO_COMPLETE'
+                }
+              }
+
+              if (_status.overallStatus === 'WAITING_FOR_ENTITY_LOADING_TO_COMPLETE') {
+                if (_status.lists.isLoaded && _status.tasks.isLoaded) {
+                  _status.overallStatus = 'LOADING_COMPLETE'
+                }
+              }
+            },
+          )
+        }
+      }
+    })
   }
 
   function _ensureLoaded() {
@@ -155,7 +221,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       if (throwIfNotFound) {
         throw message
       } else {
-        console.warn(message)
+        warn(message)
         return null
       }
     }
@@ -170,7 +236,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       if (throwIfNotFound) {
         throw message
       } else {
-        console.warn(message)
+        warn(message)
         return null
       }
     }
@@ -250,8 +316,9 @@ export const useBackendStore = defineStore('backendStore', () => {
   async function addList(newList) {
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'lists'))
-    console.log('BackendStore.addList: New document ID is ', newDocRef.id)
+    log('addList: New document ID is ', newDocRef.id)
     newList.id = newDocRef.id
+    newList.ownerId = getAuth().currentUser.uid
     await setDoc(newDocRef, newList)
     // const newRef = await addDoc(collection(db, 'lists'), newList)
 
@@ -273,11 +340,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       typeof listIdOrObject === 'string' ? getList(listIdOrObject) : listIdOrObject
 
     if (originalList == null) {
-      console.warn(
-        'BackendStore.deleteList: Attempted to delete list ',
-        listIdOrObject,
-        'but it was null',
-      )
+      warn('deleteList: Attempted to delete list ', listIdOrObject, 'but it was null')
       return
     }
 
@@ -296,7 +359,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'tasks'))
-    console.log('BackendStore.addTask: New document ID is ', newDocRef.id)
+    log('addTask: New document ID is ', newDocRef.id)
 
     const newTask = {
       id: newDocRef.id,
@@ -306,6 +369,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       parentTaskId: newFields.parentTaskId ?? null,
       childTaskIds: newFields.childTaskIds ?? [],
       isDone: newFields.isDone ?? 'DONE' == newFields.listId,
+      ownerId: getAuth().currentUser.uid,
     }
 
     await setDoc(newDocRef, newTask)
@@ -360,9 +424,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     // Check to see if its list has changed
     if (originalTask.listId !== newTask.listId) {
-      console.log(
-        `BackendStore.patchTask: Changing list from ${originalTask.listId} to ${newTask.listId}`,
-      )
+      log(`patchTask: Changing list from ${originalTask.listId} to ${newTask.listId}`)
       const oldList = getList(originalTask.listId, true)
       const newList = getList(newTask.listId, true)
 
@@ -375,8 +437,8 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     // Check to see if parent task has changed
     if (originalTask.parentTaskId !== newTask.parentTaskId) {
-      console.log(
-        `BackendStore.patchTask: Changing parent task Id from ${originalTask.parentTaskId} to ${newTask.parentTaskId}`,
+      log(
+        `patchTask: Changing parent task Id from ${originalTask.parentTaskId} to ${newTask.parentTaskId}`,
       )
 
       if (originalTask.parentTaskId != null) {
@@ -402,8 +464,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     oldChildTaskIds.difference(newChildTaskIds).forEach((oldChildTaskId) => {
       const oldChildTask = getTask(oldChildTaskId, true)
       if (oldChildTask.parentTaskId === taskId) {
-        console.log(
-          `BackendStore.patchTask: Task '${oldChildTask.title}' (${oldChildTaskId}) should no longer be a child of '${newTask.title}' - will make it an orphan`,
+        log(
+          `patchTask: Task '${oldChildTask.title}' (${oldChildTaskId}) should no longer be a child of '${newTask.title}' - will make it an orphan`,
         )
         oldChildTask.parentTaskId = null
         _saveTask(oldChildTask)
@@ -414,8 +476,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     newChildTaskIds.forEach((newChildTaskId) => {
       const newChildTask = getTask(newChildTaskId, true)
       if (newChildTask.parentTaskId !== taskId) {
-        console.log(
-          `BackendStore.patchTask: Task '${newChildTask.title}' (${newChildTaskId}) should now be made a child of '${newTask.title}'`,
+        log(
+          `patchTask: Task '${newChildTask.title}' (${newChildTaskId}) should now be made a child of '${newTask.title}'`,
         )
         newChildTask.parentTaskId = taskId
         _saveTask(newChildTask)
@@ -445,11 +507,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject) : taskIdOrObject
 
     if (task == null) {
-      console.warn(
-        'BackendStore.deleteTask: Attempted to delete task ',
-        taskIdOrObject,
-        'but it was null',
-      )
+      warn('deleteTask: Attempted to delete task ', taskIdOrObject, 'but it was null')
       return
     }
 
@@ -484,6 +542,22 @@ export const useBackendStore = defineStore('backendStore', () => {
     )
   }
 
+  async function _createDefaultListsIfNecessary(listsSnapshot) {
+    const defaultListNames = ['Backlog', 'Today', 'Done']
+
+    defaultListNames.forEach(async (name, index) => {
+      const specialCategory = name.toUpperCase()
+      if (!listsSnapshot.docs.find((doc) => doc.data().specialCategory === specialCategory)) {
+        info(`Creating default list '${specialCategory}'`)
+        await addList({
+          name: name,
+          specialCategory: specialCategory,
+          taskIds: [],
+          order: listsSnapshot.docs.length + index,
+        })
+      }
+    })
+  }
   return {
     _data,
     _status,
@@ -515,30 +589,24 @@ function handleDocChanges(snapshot, collectionType, containerObject) {
 
     switch (change.type) {
       case 'added':
-        console.log(
-          `BackendStore.handleDocChange: DB reports ADD in ${collectionType}: id=${itemData.id}`,
-        )
+        log(`handleDocChange: DB reports ADD in ${collectionType}: id=${itemData.id}`)
         containerObject[itemData.id] = itemData
         break
 
       case 'modified':
-        console.log(
-          `BackendStore.handleDocChange: DB reports UPDATE in ${collectionType}: id=${itemData.id}`,
-        )
+        log(`handleDocChange: DB reports UPDATE in ${collectionType}: id=${itemData.id}`)
         containerObject[itemData.id] = itemData
         // We shouldn't need to worry about updating child and parent IDs - they should also be saved in the DB.
         break
 
       case 'removed':
-        console.log(
-          `BackendStore.handleDocChange: DB reports DELETE in ${collectionType}: id=${itemData.id}`,
-        )
+        log(`handleDocChange: DB reports DELETE in ${collectionType}: id=${itemData.id}`)
         delete containerObject[itemData.id]
         break
 
       default:
-        console.warn(
-          `backendStore.handleDocChange: Unknown change type '${change.type}' for ${collectionType} id=${itemData.id}`,
+        warn(
+          `handleDocChange: Unknown change type '${change.type}' for ${collectionType} id=${itemData.id}`,
         )
         break
     }

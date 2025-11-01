@@ -1,14 +1,29 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useBackendStore } from './services/backendStore';
-import { onMounted } from 'vue';
+import { onMounted, watchEffect } from 'vue';
 import SearchBox from './components/SearchBox.vue';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useLogger } from './services/useLogger';
 
+const router = useRouter()
+const route = useRoute()
 const backendStore = useBackendStore()
+const { log, warn } = useLogger()
 
 onMounted(() => {
     backendStore.init()
-})
+
+    // Watch for user logout
+    onAuthStateChanged(getAuth(), user => {
+        console.log("[App] onAuthStateChanged", user)
+        if (!user) {
+            if (!route.meta.allowUnauthorised) {
+                router.push("/auth/signin")
+            }
+        }
+    })
+});
 
 </script>
 
@@ -29,11 +44,16 @@ onMounted(() => {
                     <span class="hidden sm:block">New Task</span>
                 </RouterLink>
             </nav>
-            <SearchBox />
+            <div class="flex gap-5">
+                <RouterLink to="/auth/profile" class="text-white text-sm ">
+                    <i class=" pi pi-user text-lg mt-1"></i>
+                </RouterLink>
+                <SearchBox />
+            </div>
         </header>
 
         <main
-            class="h-screen-minus-header max-h-screen-minus-header w-screen max-w-screen overflow-auto xscroll-smooth xsnap-x xsnap-mandatory">
+            class="h-screen-minus-header max-h-screen-minus-header w-screen max-w-screen overflow-auto px-4 xscroll-smooth xsnap-x xsnap-mandatory">
             <RouterView />
         </main>
     </div>

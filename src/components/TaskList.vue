@@ -60,7 +60,7 @@ function handleTaskMovedToThisList(evt) {
     // 
     // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
     // albeit the task will be inserted at the start of the new list.
-    backendStore.patchTask(taskId, { listId: props.listId, isDone: props.listId === "DONE" });
+    backendStore.patchTask(taskId, { listId: props.listId, isDone: props.listId === backendStore.doneList.id });
 
     // Now set the correct order of tasks in the new list.
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });

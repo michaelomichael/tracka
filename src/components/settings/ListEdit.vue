@@ -26,7 +26,7 @@ watchEffect(() => {
 })
 
 async function handleDeleteList() {
-    if (state.list.taskIds.length === 0 && !state.list.isSpecial) {
+    if (state.list.taskIds.length === 0 && !state.list.specialCategory) {
         if (!confirm(`Are you sure you want to delete empty list '${state.list.name}' (id ${state.list.id})?`)) {
             return
         }
@@ -51,7 +51,7 @@ async function handleRenameList() {
     <div class="bg-gray-400 rounded-xl p-4 text-center cursor-move ">
         <h2 class="list mb-4">
             <span class="text-white text-lg font-semibold">{{ state.list.name }}</span>
-            <button v-if="!state.list.isSpecial" title="Rename list" class="ml-2 text-sm hover:scale-150"
+            <button v-if="!state.list.specialCategory" title="Rename list" class="ml-2 text-sm hover:scale-150"
                 @click.prevent="handleRenameList">
                 <i class="pi pi-pencil"></i>
             </button>
@@ -62,7 +62,7 @@ async function handleRenameList() {
         </div>
 
         <div class="mt-8 hover:scale-150">
-            <button v-if="state.list.isSpecial" title="Special list - cannot be edited or deleted"
+            <button v-if="state.list.specialCategory" title="Special list - cannot be edited or deleted"
                 class="cursor-not-allowed! opacity-30" disabled="true">
                 <i class="pi pi-lock"></i>
             </button>

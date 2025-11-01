@@ -1,4 +1,7 @@
 // Asserts that there is a single match on the given array after filtering
+
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+
 // it using the given predicate.
 export const single = (arr, predicate) => {
   if (arr === null) {
@@ -34,4 +37,19 @@ export const stringToHslColour = (str) => {
   // Convert hash to [0–360] for hue
   const hue = Math.abs(hash) % 360
   return `hsl(${hue}, 70%, 50%)`
+}
+
+// Need a hack because getAuth().currentUser will return null if the
+// firebase library hasn't finished loading.
+// See https://youtu.be/xceR7mrrXsA?si=46NeFC9e7a5vUiXy&t=433
+// Note that the onAuthStateChanged() callback fires immediately if the
+// user is already logged in, so it's fine to call it lots of times in
+// quick succession.
+export function getCurrentUserOnceFirebaseHasLoaded() {
+  return new Promise((resolve) => {
+    const removeListener = onAuthStateChanged(getAuth(), (user) => {
+      removeListener()
+      resolve(user)
+    })
+  })
 }

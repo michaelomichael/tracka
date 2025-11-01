@@ -83,8 +83,9 @@ border-color-task-card {
 }
 
 .text-link {
-  color: blue;
+  color: #3366cc;
   text-decoration: underline;
+  text-underline-offset: 0.3em;
 }
 
 li.flex.bullets {
