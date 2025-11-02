@@ -43,10 +43,6 @@ onMounted(() => {
                     <i class="pi pi-box sm:!hidden text-lg mt-1"></i>
                     <span class="hidden sm:block">Archive</span>
                 </RouterLink>
-                <RouterLink to="/tasks/new">
-                    <i class="pi pi-plus-circle sm:!hidden text-lg mt-1"></i>
-                    <span class="hidden sm:block">New Task</span>
-                </RouterLink>
             </nav>
             <div class="flex gap-5">
                 <RouterLink to="/auth/profile" class="text-white text-sm ">

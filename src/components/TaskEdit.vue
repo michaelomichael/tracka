@@ -145,7 +145,7 @@ async function handleChange() {
 </script>
 
 <template>
-    <section class="w-100 m-auto">
+    <section class="max-w-full m-auto">
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
             <div id="buttons" v-if="state.isNew" class="flex gap-2 items-baseline mb-4">
                 <button

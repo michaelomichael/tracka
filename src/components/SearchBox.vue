@@ -33,7 +33,7 @@ function handleSubmit() {
 
 <template>
     <form @submit.prevent="handleSubmit()">
-        <input :class="`px-2 text-sm ${state.isSearchActive ? 'bg-amber-400' : 'bg-white '}`"
+        <input :class="`sm:w-55 w-15 px-2 text-sm ${state.isSearchActive ? 'bg-amber-400' : 'bg-white '}`"
             v-model="state.searchString" type="text" placeholder="Search" />
     </form>
 </template>
