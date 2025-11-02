@@ -2,7 +2,9 @@
 import { reactive, watchEffect } from 'vue';
 import { useBackendStore } from '../../services/backendStore';
 import { useToast } from 'vue-toastification';
+import { useLogger } from '../../services/logger';
 
+const { log } = useLogger()
 const backendStore = useBackendStore()
 const toast = useToast()
 
@@ -42,7 +44,7 @@ async function handleRenameList() {
         return
     }
 
-    console.log(`EditableList.handleRenameList: Renaming from '${state.list.name}' to '${name}'`)
+    log(`Renaming from '${state.list.name}' to '${name}'`)
     await backendStore.patchList(state.list, { name })
 }
 </script>

@@ -1,7 +1,9 @@
 <script setup>
 import { reactive, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useLogger } from '../services/logger';
 
+const { log } = useLogger()
 const router = useRouter()
 const route = useRoute()
 const state = reactive({
@@ -11,30 +13,23 @@ const state = reactive({
 
 watchEffect(() => {
     const urlSearchString = route.query.search ?? ""
-    console.log(`SearchBox.watchEffect: urlSearchString is '${urlSearchString}'`)
+    log(`watchEffect: urlSearchString is '${urlSearchString}'`)
     const formSearchString = state.searchString.trim()
     state.isSearchActive = urlSearchString.length > 0
 })
 
 function handleSubmit() {
-    console.log(`SearchBox.handleSubmit: searchString is '${state.searchString}'`)
+    log(`handleSubmit: searchString is '${state.searchString}'`)
     const submittedSearchString = state.searchString.trim()
     if (submittedSearchString.length > 0) {
         router.push({
-            query: {
-                search: submittedSearchString,
-            },
+            query: { search: submittedSearchString },
         })
     } else {
-        router.push({
-            query: {
-
-            },
-        })
+        router.push({ query: {} })
     }
 }
 </script>
-
 
 <template>
     <form @submit.prevent="handleSubmit()">

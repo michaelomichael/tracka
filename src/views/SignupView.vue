@@ -3,7 +3,7 @@ import { reactive } from 'vue';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
-import { useLogger } from '../services/useLogger';
+import { useLogger } from '../services/logger';
 
 const router = useRouter()
 const toast = useToast()
@@ -36,7 +36,6 @@ async function register() {
         <input type="password" class="border rounded w-80 p-2 mb-2" placeholder="Password" v-model="state.password" />
         <div class="flex gap-4">
             <button class="standard-button" @click="register">Submit</button>
-            <button class="standard-button" @click="signInWithGoogle">Sign In With Google</button>
         </div>
     </section>
 </template>

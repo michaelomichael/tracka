@@ -1,7 +1,6 @@
-// Asserts that there is a single match on the given array after filtering
-
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
+// Asserts that there is a single match on the given array after filtering
 // it using the given predicate.
 export const single = (arr, predicate) => {
   if (arr === null) {

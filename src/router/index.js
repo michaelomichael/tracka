@@ -76,22 +76,6 @@ const router = createRouter({
   ],
 })
 
-// // Need a hack because getAuth().currentUser will return null if the
-// // firebase library hasn't finished loading.
-// // See https://youtu.be/xceR7mrrXsA?si=46NeFC9e7a5vUiXy&t=433
-// // Note that the onAuthStateChanged() callback fires immediately if the
-// // user is already logged in, so it's fine to call it lots of times in
-// // quick succession.
-// function getCurrentUserOnceFirebaseHasLoaded() {
-//   return new Promise((resolve) => {
-//     const removeListener = onAuthStateChanged(getAuth(), (user) => {
-//       console.log(`[Router]: onAuthStateChanged(${user != null})`)
-//       removeListener()
-//       resolve(user)
-//     })
-//   })
-// }
-
 router.beforeEach(async (to, from, next) => {
   if (to.matched.some((record) => record.meta.allowUnauthorised)) {
     next()

@@ -1,13 +1,14 @@
 <script setup>
 import { computed, reactive } from 'vue';
 import { useBackendStore } from '../services/backendStore';
+import { useLogger } from '../services/logger';
 
 /*
-This component renders as a textbox which allows you to select an existing task Id or to type 
+This component renders as a textbox which allows you to select an existing task Id or to type
 in your own new one which will be created in the background (in the "backendStore.newTasksList" list).
 
 As you're typing, it'll display an autocomplete list with potential matches.
-If there are no _exact_ matches, then the first (default) item in the autocomplete list is 
+If there are no _exact_ matches, then the first (default) item in the autocomplete list is
 `<The text you entered> (create task)`
 */
 const props = defineProps({
@@ -40,12 +41,14 @@ const props = defineProps({
 
 const emit = defineEmits(["task-id-selected"])
 
+const { log } = useLogger()
 const backendStore = useBackendStore()
 
 const state = reactive({
     searchTerm: "",
     highlightedMatchIndex: 2,
 })
+
 const searchResults = computed(() => {
     const searchTerm = state.searchTerm.trim()
     const searchTermLowerCase = searchTerm.toLowerCase()
@@ -121,14 +124,14 @@ const searchResults = computed(() => {
 })
 
 async function selectMatch(match) {
-    console.log("TaskPickerCombo.selectMatch:", match)
+    log("selectMatch:", match)
 
     if (match.taskId == null) {
         const newTask = await backendStore.addTask({
             title: match.taskTitle,
             listId: backendStore.newItemsList.id
         })
-        console.log("TaskPickerCombo.selectMatch: Created a new task:", newTask)
+        log("selectMatch: Created a new task:", newTask)
 
         emit("task-id-selected", newTask.id)
     } else {

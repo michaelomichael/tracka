@@ -1,9 +1,9 @@
 <script setup>
-import { getCurrentInstance, reactive } from 'vue';
+import { reactive } from 'vue';
 import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
-import { useLogger } from '../services/useLogger';
+import { useLogger } from '../services/logger';
 
 const { log, error } = useLogger()
 const router = useRouter()
@@ -31,8 +31,7 @@ async function signin() {
 async function signInWithGoogle() {
     log("Signing in with Google...")
     try {
-        const provider = new GoogleAuthProvider()
-        const result = await signInWithPopup(getAuth(), provider)
+        const result = await signInWithPopup(getAuth(), new GoogleAuthProvider())
         log("Got Google sign-in result", result)
         toast.success("Successfully logged in")
         router.push("/")
@@ -41,7 +40,6 @@ async function signInWithGoogle() {
         toast.error(`Login failed:\n\n${e.message}`)
     }
 }
-
 </script>
 
 <template>

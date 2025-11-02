@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useBackendStore } from './services/backendStore';
-import { onMounted, watchEffect } from 'vue';
+import { onMounted } from 'vue';
 import SearchBox from './components/SearchBox.vue';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { useLogger } from './services/useLogger';
+import { useLogger } from './services/logger';
 
 const router = useRouter()
 const route = useRoute()
 const backendStore = useBackendStore()
-const { log, warn } = useLogger()
+const { log } = useLogger()
 
 onMounted(() => {
     backendStore.init()
 
     // Watch for user logout
     onAuthStateChanged(getAuth(), user => {
-        console.log("[App] onAuthStateChanged", user)
+        log("onAuthStateChanged", user)
         if (!user) {
             if (!route.meta.allowUnauthorised) {
                 router.push("/auth/signin")

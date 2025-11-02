@@ -5,7 +5,9 @@ import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
 import { copy } from "../services/utils";
 import TaskPickerCombo from "./TaskPickerCombo.vue";
+import { useLogger } from "../services/logger";
 
+const { log } = useLogger()
 const backendStore = useBackendStore()
 const toast = useToast();
 const router = useRouter()
@@ -69,7 +71,7 @@ watchEffect(() => {
             form.listId = state.task.isDone ? 'TODAY' : state.task.listId;
             form.parentTaskId = state.task.parentTaskId ?? null;
 
-            console.log("TaskEditView: got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
+            log("Got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
         }
 
         if (state.isNew && props.listId != null && state.task?.listId !== props.listId) {
@@ -84,7 +86,7 @@ watchEffect(() => {
 })
 
 const handleSubmit = () => {
-    console.log("TaskEditView: Submitting")
+    log("Submitting")
     const updatedTask = {
         title: form.title,
         description: form.description,
@@ -106,7 +108,7 @@ const handleSubmit = () => {
 }
 
 async function handleAddExistingTaskToChildTasks(childTaskId) {
-    console.log("TaskEdit.handleAddExistingTaskToChildTasks: Requested to add a child task with ID:", childTaskId)
+    log("handleAddExistingTaskToChildTasks: Requested to add a child task with ID:", childTaskId)
 
     state.task = await backendStore.patchTask(state.task, {
         childTaskIds: [...state.task.childTaskIds, childTaskId]
@@ -114,7 +116,7 @@ async function handleAddExistingTaskToChildTasks(childTaskId) {
 }
 
 async function handlePromoteChildToParentless(childTaskIdToBePromoted) {
-    console.log("TaskEdit.handlePromoteChildToParentless: Requested to promote taskId", childTaskIdToBePromoted)
+    log("handlePromoteChildToParentless: Requested to promote taskId", childTaskIdToBePromoted)
 
     state.task = await backendStore.patchTask(state.task, {
         childTaskIds: state.task.childTaskIds.filter(otherChildTaskId => otherChildTaskId !== childTaskIdToBePromoted)
@@ -123,7 +125,7 @@ async function handlePromoteChildToParentless(childTaskIdToBePromoted) {
 
 async function handleChange() {
     if (state.isNew) {
-        console.log("TaskEdit.handleChange: Task has not yet been created, so won't auto-save")
+        log("handleChange: Task has not yet been created, so won't auto-save")
         return
     }
 
@@ -134,7 +136,7 @@ async function handleChange() {
         listId: form.isDone ? backendStore.doneList.id : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
     };
-    console.log("TaskEdit.handleChange: updatedTaskFields is", updatedTaskFields)
+    log("handleChange: updatedTaskFields is", updatedTaskFields)
 
     await backendStore.patchTask(state.task.id, updatedTaskFields);
     toast.success(`Updated task '${updatedTaskFields.title}'`);

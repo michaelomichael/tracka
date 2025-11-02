@@ -2,13 +2,12 @@
 
 ## Before Migration
 
-- [ ] Sort out drag-and-drop
-  - [ ] Try again to make it snap: maybe custom scroll?
+- [√] Sort out drag-and-drop
 - [ ] Figure out the fastest way to make it load on Android
 - [ ] Figure out how to do a super-fast "add task" intent on Android:
   - [ ] Can I define intents in Capacitor/WebNative?
   - [ ] Can I map them to URLs?
-- [ ] Stop capacitor taking up the entire screen
+- [√] Stop capacitor taking up the entire screen
 
 ## After Migration
 

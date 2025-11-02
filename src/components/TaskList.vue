@@ -4,8 +4,10 @@ import TaskCard from './TaskCard.vue';
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
+import { useLogger } from "../services/logger";
 
-const backendStore = useBackendStore();
+const { log } = useLogger()
+const backendStore = useBackendStore()
 const route = useRoute()
 
 const props = defineProps({
@@ -53,7 +55,7 @@ function taskMatches(task, searchStringLowerCase) {
 
 function handleTaskMovedToThisList(evt) {
     const taskId = evt.clone.getAttribute("data-task-id");
-    console.log(`TaskList[${props.listId}].handleTaskMovedToThisList: taskId=`, taskId);
+    log(`handleTaskMovedToThisList: taskId=`, taskId);
 
     // If this is the DONE list, then we want to make sure that the task's `isDone` flag
     // is set to true. In other cases, make sure it's set to false.
@@ -67,15 +69,15 @@ function handleTaskMovedToThisList(evt) {
 }
 
 function handleTaskOrderChanged() {
-    console.log(`TaskList[${props.listId}].handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
+    log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 function handleDragStart() {
-    console.log(`TaskList[${props.listId}].handleDragStart`)
+    log(`handleDragStart`)
     document.body.classList.add("dragging")
 }
 function handleDragEnd() {
-    console.log(`TaskList[${props.listId}].handleDragEnd`)
+    log(`handleDragEnd`)
     document.body.classList.remove("dragging")
 }
 // TODO: Make the `snap-center` work when dragging

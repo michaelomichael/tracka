@@ -3,7 +3,9 @@ import { reactive, watchEffect } from 'vue';
 import { getAuth, signOut } from 'firebase/auth';
 import { RouterLink } from 'vue-router';
 import { useToast } from 'vue-toastification';
+import { useLogger } from '../services/logger';
 
+const { log } = useLogger()
 const toast = useToast()
 const auth = getAuth()
 
@@ -14,7 +16,7 @@ const state = reactive({
 
 watchEffect(() => {
     state.currentUser = auth.currentUser
-    console.log(`[UserProfileView] Current user is`, state.currentUser)
+    log(`Current user is`, state.currentUser)
 })
 
 function logout() {
@@ -40,7 +42,6 @@ function logout() {
                 <div> {{ state.currentUser.emailVerified }} </div>
                 <label>Auth provider</label>
                 <div> {{ state.currentUser.providerData[0]?.providerId }} </div>
-
             </div>
 
             <div class="mt-4">
@@ -50,7 +51,7 @@ function logout() {
         <section v-else>
             Not logged in.
             <p />
-            <RouterLink to="/auth/signin">
+            <RouterLink class="text-link" to="/auth/signin">
                 Sign In
             </RouterLink>
         </section>

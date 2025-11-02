@@ -15,7 +15,7 @@ import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { single } from './utils'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { useLogger } from './useLogger'
+import { useLogger } from './logger'
 
 const { log, info, warn } = useLogger('BackendStore')
 

@@ -3,7 +3,9 @@ import { reactive, watchEffect } from 'vue';
 import { useBackendStore } from '../../services/backendStore';
 import ListEdit from './ListEdit.vue';
 import draggable from "vuedraggable";
+import { useLogger } from '../../services/logger';
 
+const { log } = useLogger()
 const backendStore = useBackendStore()
 
 const state = reactive({
@@ -19,12 +21,12 @@ watchEffect(() => {
 })
 
 async function handleOrderChanged() {
-    console.log("ListEditor.handleOrderChanged: new order is: ", JSON.stringify(state.sortableListIds))
+    log("New order is: ", JSON.stringify(state.sortableListIds))
 
     state.sortableListIds.forEach((id, index) => {
         const list = backendStore.getList(id)
         if (list.order !== index) {
-            console.log(`ListEditor.handleOrderChanged:   moving list '${id}' from pos ${list.order} to ${index}`)
+            log(`  - moving list '${id}' from pos ${list.order} to ${index}`)
             backendStore.patchList(list, { order: index })
         }
     })

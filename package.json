@@ -8,7 +8,6 @@
   },
   "scripts": {
     "dev": "vite",
-    "xbuild": "run-p type-check \"build-only {@}\" --",
     "build": "vite build",
     "preview": "vite preview",
     "build-only": "vite build",
