@@ -4,8 +4,10 @@ import TaskList from "../components/TaskList.vue";
 import { reactive, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import TaskEdit from "../components/TaskEdit.vue";
+import { useLogger } from "../services/logger";
 
-const backendStore = useBackendStore();
+const { log } = useLogger()
+const backendStore = useBackendStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -23,21 +25,21 @@ watchEffect(() => {
     }
 
     state.showEditor = route.name !== "home"
-    console.log("TaskListsVue.watchEffect: Route name is", route.name, "and showEditor=", state.showEditor)
+    log("watchEffect: Route name is", route.name, "and showEditor=", state.showEditor)
 
     if (route.params.taskId != null) {
         state.editingTaskId = route.params.taskId
     } else {
         state.editingTaskId = null
     }
-    console.log("TaskListsVue.watchEffect: Setting state.editingTaskId to", state.editingTaskId)
+    log("watchEffect: Setting state.editingTaskId to", state.editingTaskId)
 
     if (route.query.listId != null) {
         state.newTaskListId = route.query.listId
     } else {
         state.newTaskListId = null
     }
-    console.log("TaskListsVue.watchEffect: Setting state.newTaskListid to", state.newTaskListId)
+    log("watchEffect: Setting state.newTaskListid to", state.newTaskListId)
 })
 
 function handleModalClose(eventName, other) {

@@ -13,7 +13,7 @@ import {
 import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
-import { single } from './utils'
+import { getCurrentUserOnceFirebaseHasLoaded, single, timestampNow } from './utils'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
 
@@ -125,6 +125,7 @@ export const useBackendStore = defineStore('backendStore', () => {
   const _status = reactive({
     overallStatus: 'NOT_STARTED',
     currentUserId: null,
+    dataIntegrityWarnings: [],
     lists: {
       unsubscribeCallback: null,
       isLoaded: false,
@@ -184,19 +185,14 @@ export const useBackendStore = defineStore('backendStore', () => {
             query(collection(db, collectionType), where('ownerId', '==', user.uid)),
             async (snapshot) => {
               log('Snapshot')
-              handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
+              _handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
               entityStatus.isLoaded = true
 
-              if (collectionType === 'lists') {
+              if (_status.lists.isLoaded && _status.tasks.isLoaded) {
                 if (_status.overallStatus === 'LOADING_DOCUMENTS_FOR_USER') {
-                  _status.overallStatus = 'CHECKING_FOR_DEFAULT_LISTS'
-                  await _createDefaultListsIfNecessary(snapshot)
-                  _status.overallStatus = 'WAITING_FOR_ENTITY_LOADING_TO_COMPLETE'
-                }
-              }
-
-              if (_status.overallStatus === 'WAITING_FOR_ENTITY_LOADING_TO_COMPLETE') {
-                if (_status.lists.isLoaded && _status.tasks.isLoaded) {
+                  _status.overallStatus = 'CHECKING_DATA_INTEGRITY'
+                  await _createDefaultListsIfNecessary()
+                  await _checkDataIntegrity()
                   _status.overallStatus = 'LOADING_COMPLETE'
                 }
               }
@@ -279,9 +275,6 @@ export const useBackendStore = defineStore('backendStore', () => {
     return task?.parentTaskId == null ? null : getTask(task.parentTaskId, true)
   }
 
-  const _newOrOld = (fieldName, newObject, oldObject) =>
-    newObject[fieldName] !== undefined ? newObject[fieldName] : oldObject[fieldName]
-
   /**
    * Note that modifying the list's `taskIds` will not automatically
    * sync the `listId` fields of those linked tasks; you should call
@@ -297,7 +290,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     }
 
     const newList = {
-      id: originalList.id,
+      ...originalList,
       name: _newOrOld('name', changes, originalList),
       order: _newOrOld('order', changes, originalList),
       taskIds: _newOrOld('taskIds', changes, originalList),
@@ -307,6 +300,7 @@ export const useBackendStore = defineStore('backendStore', () => {
   }
 
   function _saveList(newList) {
+    newList.modifiedTimestamp = timestampNow()
     _data.listsById[newList.id] = newList
     updateDoc(doc(db, 'lists', newList.id), newList)
     // Return a fresh reactive copy
@@ -316,9 +310,12 @@ export const useBackendStore = defineStore('backendStore', () => {
   async function addList(newList) {
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'lists'))
-    log('addList: New document ID is ', newDocRef.id)
+    log('New list ID is ', newDocRef.id)
     newList.id = newDocRef.id
     newList.ownerId = getAuth().currentUser.uid
+    newList.createdTimestamp = timestampNow()
+    newList.modifiedTimestamp = newList.createdTimestamp
+
     await setDoc(newDocRef, newList)
     // const newRef = await addDoc(collection(db, 'lists'), newList)
 
@@ -368,8 +365,11 @@ export const useBackendStore = defineStore('backendStore', () => {
       description: newFields.description ?? '',
       parentTaskId: newFields.parentTaskId ?? null,
       childTaskIds: newFields.childTaskIds ?? [],
-      isDone: newFields.isDone ?? 'DONE' == newFields.listId,
+      isDone: newFields.isDone,
       ownerId: getAuth().currentUser.uid,
+      createdTimestamp: timestampNow(),
+      modifiedTimestamp: timestampNow(),
+      doneTimestamp: newFields.isDone ? timestampNow() : null,
     }
 
     await setDoc(newDocRef, newTask)
@@ -381,6 +381,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     // Update links in the List
     const list = getList(newTask.listId, true)
     list.taskIds = [newTask.id, ...list.taskIds]
+
     _saveList(list)
 
     // Update links in the parent task (if any)
@@ -411,7 +412,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
 
     const newTask = {
-      id: originalTask.id,
+      ...originalTask,
       title: _newOrOld('title', changes, originalTask),
       description: _newOrOld('description', changes, originalTask),
       listId: _newOrOld('listId', changes, originalTask),
@@ -419,6 +420,8 @@ export const useBackendStore = defineStore('backendStore', () => {
       childTaskIds: _newOrOld('childTaskIds', changes, originalTask),
       isDone: _newOrOld('isDone', changes, originalTask),
     }
+
+    newTask.doneTimestamp = newTask.isDone ? (originalTask.doneTimestamp ?? timestampNow()) : null
 
     const taskId = newTask.id
 
@@ -495,6 +498,7 @@ export const useBackendStore = defineStore('backendStore', () => {
    * It doesn't attempt to sync any child/parent task IDs, or list IDs.
    */
   function _saveTask(updatedTask) {
+    updatedTask.modifiedTimestamp = timestampNow()
     updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
     _data.tasksById[updatedTask.id] = updatedTask
 
@@ -521,12 +525,14 @@ export const useBackendStore = defineStore('backendStore', () => {
     delete _data.tasksById[task.id]
 
     list.taskIds = list.taskIds.filter((otherTaskId) => otherTaskId !== task.id)
+    list.modifiedTimestamp = timestampNow()
     _saveList(list)
 
     task.childTaskIds.forEach((childTaskId) => {
       const childTask = getTask(childTaskId)
       if (childTask != null) {
         childTask.parentTaskId = null
+        childTask.modifiedTimestamp = timestampNow()
         _saveTask(childTask)
       }
     })
@@ -542,25 +548,167 @@ export const useBackendStore = defineStore('backendStore', () => {
     )
   }
 
-  async function _createDefaultListsIfNecessary(listsSnapshot) {
+  async function archiveDoneTasks() {
+    /*
+        Only mark a task as archivable if:
+            - It's done
+            - doneTimestamp is a while ago (TODO)
+            - Its parent task (if any, and _its_ parent task, and so on) is also archivable
+            - All of its child tasks (if any) are also archivable
+    */
+    const nonArchivableTaskIds = new Set(
+      this.tasks.filter((task) => task.isDone !== true).map((task) => task.id),
+    )
+    let candidateTasks = this.tasks.filter((task) => task.isDone === true)
+
+    const recordNonArchivableAncestors = (task) => {
+      if (nonArchivableTaskIds.has(task.id)) {
+        return true
+      }
+      const parentTask = getParentTaskForTask(task)
+      if (parentTask != null && recordNonArchivableAncestors(parentTask)) {
+        nonArchivableTaskIds.add(task.id)
+        return true
+      }
+      return false
+    }
+
+    const recordNonArchivableDescendants = (task) => {
+      if (nonArchivableTaskIds.has(task.id)) {
+        return true
+      }
+      const childTasks = getChildTasksForTask(task)
+      if (childTasks.filter((childTask) => recordNonArchivableDescendants(childTask)).length > 0) {
+        nonArchivableTaskIds.add(task.id)
+        return true
+      }
+      return false
+    }
+
+    // Check for non-archivable parents first
+    candidateTasks.forEach((task) => {
+      recordNonArchivableAncestors(task)
+    })
+
+    // Now check for non-archivable children
+    candidateTasks.forEach((task) => {
+      recordNonArchivableDescendants(task)
+    })
+
+    // Finally, see what we're left with
+    candidateTasks = candidateTasks.filter((task) => !nonArchivableTaskIds.has(task.id))
+
+    candidateTasks.forEach(async (task) => {
+      log(`We might actually be able to archive task '${task.title}' (id ${task.id})`)
+      // TODO: Delete the doc and re-create it in the archived_tasks collection with:
+      //     - listId: null
+      //    Then remove it from its current list
+
+      setDoc(doc(db, 'archived_tasks', task.id), {
+        ...task,
+        archivedTimestamp: timestampNow(),
+      })
+
+      task.parentTask = null
+      task.childTaskIds = []
+      await deleteTask(task)
+    })
+
+    return candidateTasks.length
+  }
+
+  function getArchivedTasks() {
+    return new Promise(async (resolve) => {
+      const user = await getCurrentUserOnceFirebaseHasLoaded()
+      log('User is ', user)
+      const removeListener = onSnapshot(
+        query(collection(db, 'archived_tasks'), where('ownerId', '==', user.uid)),
+        async (snapshot) => {
+          log('Archived snapshot received')
+          const archivedTasks = snapshot.docs.map((doc) => {
+            return { ...doc.data(), id: doc.id }
+          })
+          removeListener()
+          resolve(archivedTasks)
+        },
+      )
+    })
+  }
+
+  async function _createDefaultListsIfNecessary() {
     const defaultListNames = ['Backlog', 'Today', 'Done']
 
     defaultListNames.forEach(async (name, index) => {
       const specialCategory = name.toUpperCase()
-      if (!listsSnapshot.docs.find((doc) => doc.data().specialCategory === specialCategory)) {
+      const allLists = Object.values(_data.listsById)
+      if (!allLists.find((list) => list.specialCategory === specialCategory)) {
         info(`Creating default list '${specialCategory}'`)
         await addList({
           name: name,
           specialCategory: specialCategory,
           taskIds: [],
-          order: listsSnapshot.docs.length + index,
+          order: allLists.length + index,
         })
       }
     })
   }
+
+  async function _checkDataIntegrity() {
+    log('Checking data integrity')
+    _status.dataIntegrityWarnings = []
+
+    const addDataIntegrityWarning = (message) => {
+      warn(message)
+      _status.dataIntegrityWarnings.push(message)
+    }
+
+    Object.values(_data.listsById).forEach((list) => {
+      list.taskIds.forEach((taskId) => {
+        if (!_data.tasksById[taskId]) {
+          addDataIntegrityWarning(
+            `List '${list.name}' (id ${list.id}) references unknown task ID '${taskId}'`,
+          )
+        }
+      })
+    })
+
+    Object.values(_data.tasksById).forEach((task) => {
+      const descriptor = `Task '${task.title}' (id ${task.id})`
+      if (!_data.listsById[task.listId]) {
+        addDataIntegrityWarning(`${descriptor} references unknown list ID '${task.listId}'`)
+      }
+
+      if (task.parentTaskId === task.id) {
+        addDataIntegrityWarning(`${descriptor} self-references itself as a parent`)
+      }
+
+      if (task.parentTaskId != null && !_data.tasksById[task.parentTaskId]) {
+        addDataIntegrityWarning(
+          `${descriptor} references unknown parent task ID '${task.parentTaskId}'`,
+        )
+      }
+
+      if (task.childTaskIds.includes(task.id)) {
+        addDataIntegrityWarning(`${descriptor} self-references itself as a child`)
+      }
+      if (task.parentTaskId != null && task.childTaskIds.includes(task.parentTaskId)) {
+        addDataIntegrityWarning(
+          `${descriptor} includes other task id '${task.parentTaskId}' as both a parent and a child`,
+        )
+      }
+
+      task.childTaskIds.forEach((childTaskId) => {
+        if (!_data.tasksById[childTaskId]) {
+          addDataIntegrityWarning(`${descriptor} references unknown child task ID '${childTaskId}'`)
+        }
+      })
+    })
+  }
+
   return {
     _data,
     _status,
+    _checkDataIntegrity,
     init,
     isLoaded,
     tasks,
@@ -580,10 +728,12 @@ export const useBackendStore = defineStore('backendStore', () => {
     patchTask,
     deleteTask,
     findTasks,
+    archiveDoneTasks,
+    getArchivedTasks,
   }
 })
 
-function handleDocChanges(snapshot, collectionType, containerObject) {
+function _handleDocChanges(snapshot, collectionType, containerObject) {
   snapshot.docChanges().forEach((change) => {
     const itemData = { ...change.doc.data(), id: change.doc.id }
 
@@ -611,4 +761,8 @@ function handleDocChanges(snapshot, collectionType, containerObject) {
         break
     }
   })
+}
+
+function _newOrOld(fieldName, newObject, oldObject) {
+  return newObject[fieldName] !== undefined ? newObject[fieldName] : oldObject[fieldName]
 }

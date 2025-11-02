@@ -48,7 +48,6 @@ async function handleNewList() {
 
 <template>
     <section v-if="state.isLoaded">
-        <h2> Lists</h2>
         <draggable class="flex gap-2 items-stretch" v-model="state.sortableListIds" itemKey="this"
             @update="handleOrderChanged" animation="200" delay="1000" delayOnTouchOnly="true">
             <template #item="{ element }">

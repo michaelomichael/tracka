@@ -5,10 +5,12 @@ import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLogger } from "../services/logger";
+import { useToast } from "vue-toastification";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
 const route = useRoute()
+const toast = useToast()
 
 const props = defineProps({
     listId: {
@@ -62,7 +64,15 @@ function handleTaskMovedToThisList(evt) {
     // 
     // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
     // albeit the task will be inserted at the start of the new list.
-    backendStore.patchTask(taskId, { listId: props.listId, isDone: props.listId === backendStore.doneList.id });
+    const isDone = props.listId === backendStore.doneList.id
+
+    backendStore.patchTask(
+        taskId,
+        {
+            listId: props.listId,
+            isDone: isDone,
+        }
+    );
 
     // Now set the correct order of tasks in the new list.
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
@@ -80,6 +90,17 @@ function handleDragEnd() {
     log(`handleDragEnd`)
     document.body.classList.remove("dragging")
 }
+
+async function archiveDoneTasks() {
+    const numAffected = await backendStore.archiveDoneTasks()
+
+    if (numAffected === 0) {
+        toast.success("There were no suitable tasks to archive")
+    } else {
+        toast.success(`Archived ${numAffected} ${numAffected === 1 ? "task" : "tasks"}`)
+    }
+}
+
 // TODO: Make the `snap-center` work when dragging
 </script>
 
@@ -95,11 +116,20 @@ function handleDragEnd() {
                 {{ state.list.name }}
             </h2>
 
-            <!-- "Add Task" button: -->
-            <RouterLink :to="`/tasks/new?listId=${state.list.id}`"
-                class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md absolute right-4 top-4">
-                <i class="pi pi-plus"></i>
-            </RouterLink>
+            <div class="absolute right-4 top-4 flex gap-1">
+                <!-- "Archive Done Tasks" button: -->
+                <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
+                    title="Archive Old 'DONE' Tasks"
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    <i class="pi pi-box"></i>
+                </button>
+
+                <!-- "Add Task" button: -->
+                <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    <i class="pi pi-plus"></i>
+                </RouterLink>
+            </div>
         </template>
         <template #item="{ element }">
             <TaskCard :taskId="element" />

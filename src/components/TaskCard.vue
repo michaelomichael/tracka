@@ -1,7 +1,7 @@
 <script setup>
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
-import ProgressBar from './ProgressBar.vue';
+import ProgressBar from './widgets/ProgressBar.vue';
 import { stringToHslColour } from '../services/utils';
 
 const backendStore = useBackendStore();

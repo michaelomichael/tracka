@@ -87,7 +87,7 @@ watchEffect(() => {
 
 const handleSubmit = () => {
     log("Submitting")
-    const updatedTask = {
+    const updatedTaskDetails = {
         title: form.title,
         description: form.description,
         isDone: form.isDone,
@@ -97,11 +97,11 @@ const handleSubmit = () => {
     };
 
     if (state.isNew) {
-        backendStore.addTask(updatedTask)
-        toast.success(`Created task '${updatedTask.title}'`);
+        backendStore.addTask(updatedTaskDetails)
+        toast.success(`Created task '${updatedTaskDetails.title}'`);
     } else {
-        backendStore.patchTask(state.task.id, updatedTask);
-        toast.success(`Updated task '${updatedTask.title}'`);
+        backendStore.patchTask(state.task.id, updatedTaskDetails);
+        toast.success(`Updated task '${updatedTaskDetails.title}'`);
     }
 
     router.push("/");

@@ -52,3 +52,20 @@ export function getCurrentUserOnceFirebaseHasLoaded() {
     })
   })
 }
+
+export function timestampNow() {
+  return new Date().toISOString()
+}
+
+/**
+ * Convert the given array into a map, using the array items' id property.
+ *
+ * @param {*} arr Any array of objects, provided each object includes an 'id' property.
+ * @returns A map of id-to-item
+ */
+export function associatedById(arr) {
+  return arr.reduce((result, item) => {
+    result[item.id] = item
+    return result
+  }, {})
+}

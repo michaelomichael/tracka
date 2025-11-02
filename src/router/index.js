@@ -9,6 +9,7 @@ import UserProfileView from '../views/UserProfileView.vue'
 import SigninView from '../views/SigninView.vue'
 import { useToast } from 'vue-toastification'
 import { getCurrentUserOnceFirebaseHasLoaded } from '../services/utils'
+import ArchivedTasksView from '../views/ArchivedTasksView.vue'
 
 const toast = useToast()
 
@@ -46,6 +47,11 @@ const router = createRouter({
       path: '/tasks/search',
       name: 'search-for-tasks',
       component: SearchTasksView,
+    },
+    {
+      path: '/tasks/archive',
+      name: 'archived-tasks',
+      component: ArchivedTasksView,
     },
     {
       path: '/settings',
