@@ -112,23 +112,25 @@ async function archiveDoneTasks() {
         delayOnTouchOnly="true" forceAutoScrollFallback="true" xforceFallback="true" xscrollSensitivity="360"
         xscrollSpeed="460" revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
         <template #header>
-            <h2 class="sticky top-0 text-xl font-semibold text-white text-center bg-gray-400">
-                {{ state.list.name }}
-            </h2>
+            <div class="sticky top-0">
+                <h2 class="text-xl font-semibold text-white text-center bg-gray-400">
+                    {{ state.list.name }}
+                </h2>
 
-            <div class="absolute right-4 top-4 flex gap-1">
-                <!-- "Archive Done Tasks" button: -->
-                <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
-                    title="Archive Old 'DONE' Tasks"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                    <i class="pi pi-box"></i>
-                </button>
+                <div class="absolute right-0 top-0 flex gap-1">
+                    <!-- "Archive Done Tasks" button: -->
+                    <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
+                        title="Archive Old 'DONE' Tasks"
+                        class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                        <i class="pi pi-box"></i>
+                    </button>
 
-                <!-- "Add Task" button: -->
-                <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                    <i class="pi pi-plus"></i>
-                </RouterLink>
+                    <!-- "Add Task" button: -->
+                    <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
+                        class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                        <i class="pi pi-plus"></i>
+                    </RouterLink>
+                </div>
             </div>
         </template>
         <template #item="{ element }">

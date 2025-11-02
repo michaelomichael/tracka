@@ -47,12 +47,12 @@ watchEffect(async () => {
                 Parent: {{ state.parentTask.title }}
             </RouterLink>
         </p>
-        <h3 class="text-lg font-task-card-title">
+        <h3 class="text-sm font-semibold  font-task-card-title">
             <i v-if="state.task.isDone" class="pi pi-check-circle mr-1 bg-green-500 rounded-4xl" />
             {{ state.task.title }}
         </h3>
 
-        <p class="text-sm"> {{ state.task.description }} </p>
+        <p class="text-xs"> {{ state.task.description }} </p>
 
         <div v-if="state.childTasks.length > 0" class="text-xs">
             <ProgressBar class="mt-2" :progress="state.progress" />
@@ -60,7 +60,7 @@ watchEffect(async () => {
                 <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
                     <!-- TODO: Add an icon beside each one if it's done -->
                     <RouterLink :to="`/tasks/${childTask.id}/edit`">
-                        {{ backendStore.getListForTask(childTask)?.name }} - {{ childTask.title }}
+                        ({{ backendStore.getListForTask(childTask)?.name }}) {{ childTask.title }}
                     </RouterLink>
                 </li>
             </ul>
