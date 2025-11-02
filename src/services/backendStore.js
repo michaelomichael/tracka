@@ -18,6 +18,8 @@ import { useLogger } from './logger'
 
 const { log, info, warn } = useLogger('BackendStore')
 
+log(`App ID env var is '${import.meta.env['VITE_FIREBASE_APP_ID']}'`)
+
 // Will come from .env.local
 let credentials = {
   apiKey: import.meta.env['VITE_FIREBASE_API_KEY'],
