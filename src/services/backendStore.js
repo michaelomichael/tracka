@@ -10,7 +10,6 @@ import {
   query,
   where,
 } from 'firebase/firestore'
-import credentials from '@/../firebaseCredentials.json'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { getCurrentUserOnceFirebaseHasLoaded, single, timestampNow } from './utils'
@@ -18,6 +17,16 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
 
 const { log, info, warn } = useLogger('BackendStore')
+
+// Will come from .env.local
+let credentials = {
+  apiKey: import.meta.env['VITE_FIREBASE_API_KEY'],
+  authDomain: import.meta.env['VITE_FIREBASE_AUTH_DOMAIN'],
+  projectId: import.meta.env['VITE_FIREBASE_PROJECT_ID'],
+  storageBucket: import.meta.env['VITE_FIREBASE_STORAGE_BUCKET'],
+  messagingSenderId: import.meta.env['VITE_FIREBASE_MESSAGING_SENDER_ID'],
+  appId: import.meta.env['VITE_FIREBASE_APP_ID'],
+}
 
 const defaultData = {
   lists: {
@@ -102,7 +111,7 @@ export async function resetDb() {
 
 //await resetDb()
 
-// TODO: Is this not done in the main app script?
+// TODO: Should this not be done in the main app script?
 export const firebaseApp = initializeApp(credentials)
 
 const db = getFirestore(firebaseApp)
