@@ -17,15 +17,18 @@ app.use(Toast, {
       timeout: 10000,
       closeButton: 'button',
       hideProgressBar: true,
+      position: 'bottom-right',
     },
     [TYPE.WARNING]: {
       timeout: 4000,
       closeButton: 'button',
       hideProgressBar: true,
+      position: 'bottom-right',
     },
     [TYPE.SUCCESS]: {
       timeout: 3000,
       hideProgressBar: true,
+      position: 'bottom-right',
     },
   },
 })
