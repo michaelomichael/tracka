@@ -84,11 +84,27 @@ function handleTaskOrderChanged() {
 }
 function handleDragStart() {
     log(`handleDragStart`)
+    // TODO: Is this still needed?
     document.body.classList.add("dragging")
+
+    // Disable snap-to-column scrolling otherwise it won't auto-scroll while dragging
+    toggleSnapScrolling(false)
 }
 function handleDragEnd() {
     log(`handleDragEnd`)
+    // TODO: Is this still needed?
     document.body.classList.remove("dragging")
+
+    toggleSnapScrolling(true)
+}
+
+function toggleSnapScrolling(enabled) {
+    setTimeout(() => {
+        const classList = document.querySelector("#app > div > main").classList
+        classList.toggle("scroll-smooth", enabled)
+        classList.toggle("snap-x", enabled)
+        classList.toggle("snap-mandatory", enabled)
+    }, 100)
 }
 
 async function archiveDoneTasks() {
@@ -100,16 +116,34 @@ async function archiveDoneTasks() {
         toast.success(`Archived ${numAffected} ${numAffected === 1 ? "task" : "tasks"}`)
     }
 }
-
-// TODO: Make the `snap-center` work when dragging
 </script>
 
 <template>
+    <!--
+    Rationale for some of the settings below:
+        * @contextmenu.prevent:
+        Added to prevent a long press on Android browser from triggering the context menu.
+
+        * delay="300" + delayOnTouchOnly="true":
+        Without this, android can't tell whether you're dragging the item or trying to flick-scroll
+        the screen.
+
+        * forceFallback="true" + @dragstart.prevent:
+        Either of these on its own borks it, but together they seem to stop the grey system drag-and-drop
+        from happening.
+
+    Other things I've experimented with:
+        * draggable="false":
+        Added to try to prevent the system drag-and-drop (grey box) that happens sometimes.
+        It had the opposite effect: SortableJS didn't work at all, and the system drag-and-drop was 
+        always active!
+    -->
     <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
-        class="rounded-xl w-70 min-w-70 p-4 m-6 relative bg-gray-400 xsnap-center" :data-list-id="props.listId"
-        v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
-        @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
-        delayOnTouchOnly="true" forceAutoScrollFallback="true" xforceFallback="true" xscrollSensitivity="360"
+        class="tracka-list rounded-xl w-70 min-w-50 p-4 m-6 relative bg-gray-400 snap-center"
+        :data-list-id="props.listId" v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists"
+        itemKey="this" @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
+        @xmove="handleMove" delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true"
+        xscrollSensitivity="60" multi-drag @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt"
         xscrollSpeed="460" revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
         <template #header>
             <div class="sticky top-0">

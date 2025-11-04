@@ -17,11 +17,33 @@ const state = reactive({
     newTaskListId: null,
     showEditor: false,
     isLoaded: false,
+    isInitialScrollingDone: false,
 })
 
 watchEffect(() => {
     if (backendStore.isLoaded) {
         state.isLoaded = true
+    }
+    if (state.isLoaded && !state.isInitialScrollingDone) {
+        setTimeout(() => {
+            // TODO - remember the previously centred list?
+            const visibleList = backendStore.lists.find(list => list.name.toUpperCase() === "TODAY")
+            log("Will try to centre list", visibleList)
+            if (visibleList != null) {
+                const elem = document.querySelector(`section.tracka-list[data-list-id='${visibleList.id}']`)
+                if (elem) {
+                    log("Got list elem", elem)
+                    elem.scrollIntoView({
+                        behavior: "instant",
+                        block: "nearest",
+                        inline: "center",
+                    })
+                } else {
+                    log("Didn't find list elem with ID", visibleList.id)
+                }
+            }
+        }, 100)
+        state.isInitialScrollingDone = true
     }
 
     state.showEditor = route.name !== "home"
