@@ -69,3 +69,36 @@ export function associatedById(arr) {
     return result
   }, {})
 }
+
+/**
+ * @param {*} value
+ * @returns `true` if value is null, undefined, empty array, or ""
+ */
+export function isEmpty(value) {
+  const isArray = Array.isArray(value)
+  const valueType = typeof value
+
+  if (value == null || (isArray && value.length === 0) || value === '') {
+    return true
+  } else if (isArray || valueType === 'string') {
+    return false
+  } else {
+    let valueDescription = value
+    let isJsonDescription = false
+    try {
+      valueDescription = JSON.stringify(value)
+      isJsonDescription = true
+    } catch (e) {}
+    throw `[utils.isEmpty] Parameter with type '${valueType}' and ${isJsonDescription ? 'JSON ' : ''}value '${valueDescription}' is not an acceptable input to this function. Expected null, undefined, an array, or a string`
+  }
+}
+
+/**
+ * Similar to isEmpty() but also checks for strings containing only whitespace (incl. line terminators).
+ *
+ * @param {*} value
+ * @returns `true` if value is null, undefined, empty array, "", or a string containing only whitespace
+ */
+export function isBlank(value) {
+  return isEmpty(value) || (typeof value === 'string' && value.trim() === '')
+}

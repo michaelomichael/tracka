@@ -12,7 +12,13 @@ import {
 } from 'firebase/firestore'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
-import { getCurrentUserOnceFirebaseHasLoaded, single, timestampNow } from './utils'
+import {
+  getCurrentUserOnceFirebaseHasLoaded,
+  isBlank,
+  isEmpty,
+  single,
+  timestampNow,
+} from './utils'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
 
@@ -216,7 +222,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function _ensureLoaded() {
     if (!isLoaded) {
-      throw 'backendStore: attempted to access tasks or lists before data was loaded'
+      throw '[BackendStore] Attempted to access tasks or lists before data was loaded'
     }
   }
 
@@ -224,11 +230,11 @@ export const useBackendStore = defineStore('backendStore', () => {
     _ensureLoaded()
     const task = _data.tasksById[taskId]
     if (task == null) {
-      const message = `BackendStore.getTask: Task id '${taskId}' was not found`
+      const message = `[BackendStore.getTask] Task id '${taskId}' was not found`
       if (throwIfNotFound) {
         throw message
       } else {
-        warn(message)
+        console.warn(message)
         return null
       }
     }
@@ -239,11 +245,11 @@ export const useBackendStore = defineStore('backendStore', () => {
     _ensureLoaded()
     const list = _data.listsById[listId]
     if (list == null) {
-      const message = `BackendStore.getList: List id '${listId}' was not found`
+      const message = `[BackendStore.getList] List with id '${listId}' was not found`
       if (throwIfNotFound) {
         throw message
       } else {
-        warn(message)
+        console.warn(message)
         return null
       }
     }
@@ -255,7 +261,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     const task = typeof taskIdOrObject === 'string' ? getTask(taskIdOrObject, true) : taskIdOrObject
 
     if (task.listId === null) {
-      throw `backendStore.getListForTask: Task id ${task.id} has no listId`
+      throw `[BackendStore.getListForTask] Task with id ${task.id} has no listId`
     }
 
     return getList(task.listId, true)
@@ -293,12 +299,11 @@ export const useBackendStore = defineStore('backendStore', () => {
    */
   function patchList(listIdOrObject, changes) {
     _ensureLoaded()
+
     const originalList =
       typeof listIdOrObject === 'string' ? getList(listIdOrObject, true) : listIdOrObject
 
-    if (originalList == null) {
-      throw ("patchList: can't find original list", listIdOrObject)
-    }
+    _validateList(originalList)
 
     const newList = {
       ...originalList,
@@ -312,6 +317,8 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function _saveList(newList) {
     newList.modifiedTimestamp = timestampNow()
+    _validateList(newList)
+
     _data.listsById[newList.id] = newList
     updateDoc(doc(db, 'lists', newList.id), newList)
     // Return a fresh reactive copy
@@ -353,7 +360,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     }
 
     if (originalList.taskIds.length > 0) {
-      throw `Cannot delete list '${originalList.name}' because it still contains tasks`
+      throw `[BackendStore.deleteList] Cannot delete list '${originalList.name}' because it still contains tasks`
     }
 
     deleteDoc(doc(db, 'lists', originalList.id))
@@ -361,13 +368,16 @@ export const useBackendStore = defineStore('backendStore', () => {
   }
 
   async function addTask(newFields) {
-    if (newFields.title == null || newFields.listId == null) {
-      throw 'BackendStore.addTask: You must specify at least a title and a listId!'
+    if (isEmpty(newFields.title) || isEmpty(newFields.listId)) {
+      throw '[BackendStore.addTask] You must specify at least a title and a listId!'
     }
 
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'tasks'))
     log('addTask: New document ID is ', newDocRef.id)
+
+    const now = timestampNow()
+    const isDone = newFields.isDone ?? false
 
     const newTask = {
       id: newDocRef.id,
@@ -376,12 +386,14 @@ export const useBackendStore = defineStore('backendStore', () => {
       description: newFields.description ?? '',
       parentTaskId: newFields.parentTaskId ?? null,
       childTaskIds: newFields.childTaskIds ?? [],
-      isDone: newFields.isDone,
+      isDone: isDone,
       ownerId: getAuth().currentUser.uid,
-      createdTimestamp: timestampNow(),
-      modifiedTimestamp: timestampNow(),
-      doneTimestamp: newFields.isDone ? timestampNow() : null,
+      createdTimestamp: newFields.createdTimestamp ?? now,
+      modifiedTimestamp: now,
+      doneTimestamp: isDone ? (newFields.doneTimestamp ?? now) : null,
     }
+
+    log('Saving task', newTask)
 
     await setDoc(newDocRef, newTask)
 
@@ -406,7 +418,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     newTask.childTaskIds.forEach((childTaskId) => {
       const childTask = getTask(childTaskId, true)
       if (childTask.parentTaskId != null) {
-        throw `BackendStore.addTask: Trying to add child task '${childTaskId}' but that task already has a parent (id ${childTask.parentTaskId})`
+        throw `[BackendStore.addTask] Trying to add child task '${childTaskId}' but that task already has a parent (id ${childTask.parentTaskId})`
       }
       // TODO: Other validation, e.g. make sure that the child task Id !== thisTaskId
       childTask.parentTaskId = newTask.id
@@ -527,7 +539,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     }
 
     if (task.childTaskIds.length > 0) {
-      throw ("BackendStore.deleteTask: Can't delete task", task, 'because it has children')
+      throw `[BackendStore.deleteTask] Can't delete task with ID '${task.id}' because it has children`
     }
 
     const list = getListForTask(task)
@@ -776,4 +788,12 @@ function _handleDocChanges(snapshot, collectionType, containerObject) {
 
 function _newOrOld(fieldName, newObject, oldObject) {
   return newObject[fieldName] !== undefined ? newObject[fieldName] : oldObject[fieldName]
+}
+
+function _validateList(list) {
+  // TODO: implement this, and use it in more places above.
+}
+
+function _validateTask(task) {
+  // TODO: implement this, and use it in more places above.
 }

@@ -126,16 +126,15 @@ const searchResults = computed(() => {
 async function selectMatch(match) {
     log("selectMatch:", match)
 
-    if (match.taskId == null) {
+    if (match.taskId != null) {
+        emit("task-id-selected", match.taskId)
+    } else {
         const newTask = await backendStore.addTask({
             title: match.taskTitle,
-            listId: backendStore.newItemsList.id
+            listId: backendStore.newItemsList.id,
         })
         log("selectMatch: Created a new task:", newTask)
-
         emit("task-id-selected", newTask.id)
-    } else {
-        emit("task-id-selected", match.taskId)
     }
 
     state.searchTerm = ""
