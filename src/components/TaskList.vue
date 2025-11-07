@@ -135,16 +135,16 @@ async function archiveDoneTasks() {
     Other things I've experimented with:
         * draggable="false":
         Added to try to prevent the system drag-and-drop (grey box) that happens sometimes.
-        It had the opposite effect: SortableJS didn't work at all, and the system drag-and-drop was 
+        It had the opposite effect: SortableJS didn't work at all, and the system drag-and-drop was
         always active!
     -->
     <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
         class="tracka-list rounded-xl w-70 min-w-55 p-4 m-3 relative bg-gray-400 snap-center"
         :data-list-id="props.listId" v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists"
         itemKey="this" @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
-        @xmove="handleMove" delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true"
-        xscrollSensitivity="60" multi-drag @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt"
-        xscrollSpeed="460" revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
+        delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60" multi-drag
+        @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
+        revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
         <template #header>
             <div class="sticky top-0">
                 <h2 class="text-xl font-semibold text-white text-center bg-gray-400">

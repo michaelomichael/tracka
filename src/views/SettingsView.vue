@@ -35,7 +35,7 @@ async function archiveOldTasks() {
             </section>
             <section>
                 <h2>Housekeeping</h2>
-                <button class="standard-button" @click.prevent="archiveOldTasks"> Archive Old Tasks </button>
+                <Button @click.prevent="archiveOldTasks"> Archive Old Tasks </Button>
             </section>
         </div>
 

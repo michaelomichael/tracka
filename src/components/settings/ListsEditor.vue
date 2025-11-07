@@ -55,8 +55,8 @@ async function handleNewList() {
             </template>
 
             <template #footer>
-                <button class="standard-button block rounded-xl! min-w-40 w-40" @click.prevent="handleNewList">
-                    <i class="pi pi-plus-circle"> </i> Add a new list</button>
+                <Button class="block rounded-xl! min-w-40 w-40" @click.prevent="handleNewList">
+                    <i class="pi pi-plus-circle"> </i> Add a new list</Button>
             </template>
         </draggable>
 

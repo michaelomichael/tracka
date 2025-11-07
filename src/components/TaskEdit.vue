@@ -3,7 +3,7 @@ import { reactive, watchEffect, computed } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
-import { copy } from "../services/utils";
+import { copy, timestampNow } from "../services/utils";
 import TaskPickerCombo from "./TaskPickerCombo.vue";
 import { useLogger } from "../services/logger";
 
@@ -29,6 +29,8 @@ const form = reactive({
     listId: "",
     parentTaskId: "",
     isDone: false,
+    isDueByEnabled: false,
+    dueByDate: null,
 });
 
 const state = reactive({
@@ -70,6 +72,8 @@ watchEffect(() => {
             // un-checks the checkbox.
             form.listId = state.task.isDone ? 'TODAY' : state.task.listId;
             form.parentTaskId = state.task.parentTaskId ?? null;
+            form.isDueByEnabled = state.task.dueByTimestamp != null;
+            form.dueByDate = (state.task.dueByTimestamp ?? timestampNow()).substring(0, 10)
 
             log("Got task for id", props.taskId, JSON.parse(JSON.stringify(state.task)))
         }
@@ -94,6 +98,7 @@ const handleSubmit = () => {
         listId: form.isDone ? backendStore.doneList.id : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
         childTaskIds: copy(state.task.childTaskIds),
+        dueByTimestamp: form.isDueByEnabled ? `${form.dueByDate}T08:00:00Z` : null,
     };
 
     if (state.isNew) {
@@ -129,18 +134,27 @@ async function handleChange() {
         return
     }
 
+    log("handleChange: form.dueByDate is", form.dueByDate)
+
+    const dueByDate = typeof (form.dueByDate) === "string"
+        ? form.dueByDate
+        : form.dueByDate?.toISOString()?.substring(0, 10)
+
     const updatedTaskFields = {
         title: form.title,
         description: form.description,
         isDone: form.isDone,
         listId: form.isDone ? backendStore.doneList.id : form.listId,
         parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
+        dueByTimestamp: form.isDueByEnabled ? `${dueByDate}T08:00:00Z` : null,
     };
     log("handleChange: updatedTaskFields is", updatedTaskFields)
 
     await backendStore.patchTask(state.task.id, updatedTaskFields);
     toast.success(`Updated task '${updatedTaskFields.title}'`);
 }
+
+const todaysDate = () => timestampNow().substring(0, 10)
 
 </script>
 
@@ -220,6 +234,12 @@ async function handleChange() {
                 </div>
             </div>
 
+            <div id="due-date-field" class="mb-4 flex gap-2 items-baseline">
+                <input type="checkbox" id="due-date-enabled" v-model="form.isDueByEnabled" @change="handleChange()" />
+                <label for="due-date-enabled">Due date{{ form.isDueByEnabled ? ':' : '' }} </label>
+                <DatePicker v-if="form.isDueByEnabled" v-model="form.dueByDate" fluid date-format="yy-mm-dd"
+                    @value-change="console.log('##### value changed!'); handleChange()" />
+            </div>
         </form>
     </section>
 </template>

@@ -201,7 +201,7 @@ export const useBackendStore = defineStore('backendStore', () => {
             //collection(db, collectionType),
             query(collection(db, collectionType), where('ownerId', '==', user.uid)),
             async (snapshot) => {
-              log('Snapshot')
+              log('Snapshot received')
               _handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
               entityStatus.isLoaded = true
 
@@ -408,6 +408,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       createdTimestamp: newFields.createdTimestamp ?? now,
       modifiedTimestamp: now,
       doneTimestamp: isDone ? (newFields.doneTimestamp ?? now) : null,
+      dueByTimestamp: newFields.dueByTimestamp ?? null,
     }
 
     log('Saving task', newTask)
@@ -459,6 +460,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       parentTaskId: _newOrOld('parentTaskId', changes, originalTask),
       childTaskIds: _newOrOld('childTaskIds', changes, originalTask),
       isDone: _newOrOld('isDone', changes, originalTask),
+      dueByTimestamp: _newOrOld('dueByTimestamp', changes, originalTask),
     }
 
     newTask.doneTimestamp = newTask.isDone ? (originalTask.doneTimestamp ?? timestampNow()) : null

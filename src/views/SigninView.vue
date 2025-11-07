@@ -48,8 +48,8 @@ async function signInWithGoogle() {
         <input type="text" class="border rounded w-80 p-2 mb-2" placeholder=" Email" v-model="state.email" />
         <input type="password" class="border rounded w-80 p-2 mb-2" placeholder="Password" v-model="state.password" />
         <div class="flex gap-4">
-            <button class="standard-button" @click="signin">Submit</button>
-            <button class="standard-button" @click="signInWithGoogle">Sign In With Google</button>
+            <Button @click="signin">Submit</Button>
+            <Button @click="signInWithGoogle">Sign In With Google</Button>
         </div>
         <div>
             Don't have an account? <RouterLink class="text-link" to="/auth/signup">Sign-up here.</RouterLink>

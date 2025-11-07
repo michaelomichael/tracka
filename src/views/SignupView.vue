@@ -35,7 +35,7 @@ async function register() {
         <input type="text" class="border rounded w-80 p-2 mb-2" placeholder=" Email" v-model="state.email" />
         <input type="password" class="border rounded w-80 p-2 mb-2" placeholder="Password" v-model="state.password" />
         <div class="flex gap-4">
-            <button class="standard-button" @click="register">Submit</button>
+            <Button @click="register">Submit</Button>
         </div>
     </section>
 </template>

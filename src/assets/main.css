@@ -47,20 +47,6 @@ button {
   cursor: pointer;
 }
 
-button.standard-button,
-input[type='submit'] {
-  border: 1px solid gray;
-  border-radius: 0.3rem;
-  padding: 0.2rem 0.6rem;
-  background-color: var(--color-button);
-  color: var(--color-text);
-}
-
-button.standard-button:hover,
-input[type='submit']:hover {
-  background-color: var(--color-button-hover);
-}
-
 h2.list {
   font-size: 1rem;
   font-weight: 500;
@@ -111,4 +97,18 @@ li.flex.bullets::before {
 .text-3xs {
   font-size: 0.5rem;
   line-height: calc(1 / 0.5);
+}
+
+.p-datepicker-panel {
+  z-index: 1200 !important;
+}
+
+.task-due-by-2 {
+  background-color: yellow;
+}
+.task-due-by-3 {
+  background-color: orange;
+}
+.task-due-by-4 {
+  background-color: red;
 }

@@ -58,6 +58,35 @@ export function timestampNow() {
 }
 
 /**
+ * Returns the number of days between now (or the optionalReferenceDate, if it is provided) and the given targetDate.
+ * It's an approximation - we're not being super fussy.
+ *
+ * If the targetDate is in the past, we'll return a negative number.
+ *
+ * @param {*} targetDate Can be a date string (yyyy-mm-dd), a timestamp string (yyyy-mm-ddThh:mm:ss.SSSZ), or a Date object; all UTC.
+ * @param {*} optionalReferenceDate Date object, defaults to current date/time.
+ */
+export function numDaysUntil(targetDate, optionalReferenceDate) {
+  const referenceDate = optionalReferenceDate ?? new Date()
+
+  const referenceUnixTimeAtMidnight = new Date(new Date(referenceDate).setUTCHours(0, 0, 0, 0))
+  let targetUnixTimeAtMidnight
+  if (typeof targetDate === 'string') {
+    if (!targetDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+      throw `[numDaysUntil] Invalid targetDate string value '${targetDate}'`
+    }
+    targetUnixTimeAtMidnight = Date.parse(targetDate)
+  } else if (targetDate instanceof Date) {
+    targetUnixTimeAtMidnight = new Date(new Date(targetDate).setUTCHours(0, 0, 0, 0))
+  } else {
+    throw `[numDaysUntil] The targetDate provided ('${targetDate}', ${typeof targetDate}) is invalid`
+  }
+
+  const NUM_MILLIS_PER_DAY = 1000 * 60 * 60 * 24
+  return Math.floor((targetUnixTimeAtMidnight - referenceUnixTimeAtMidnight) / NUM_MILLIS_PER_DAY)
+}
+
+/**
  * Convert the given array into a map, using the array items' id property.
  *
  * @param {*} arr Any array of objects, provided each object includes an 'id' property.
@@ -101,4 +130,24 @@ export function isEmpty(value) {
  */
 export function isBlank(value) {
   return isEmpty(value) || (typeof value === 'string' && value.trim() === '')
+}
+
+export function taskDueByPanicIndex(task) {
+  if (task.dueByTimestamp == null) {
+    return 0
+  }
+
+  const numDays = numDaysUntil(task.dueByTimestamp)
+
+  if (numDays > 14) {
+    return 0
+  } else if (numDays > 7) {
+    return 1
+  } else if (numDays > 1) {
+    return 2
+  } else if (numDays > 0) {
+    return 3
+  } else {
+    return 4
+  }
 }

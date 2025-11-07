@@ -45,7 +45,7 @@ function logout() {
             </div>
 
             <div class="mt-4">
-                <button class="standard-button" @click="logout">Logout</button>
+                <Button @click="logout">Logout</Button>
             </div>
         </section>
         <section v-else>

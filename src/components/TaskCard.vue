@@ -2,7 +2,7 @@
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './widgets/ProgressBar.vue';
-import { stringToHslColour } from '../services/utils';
+import { stringToHslColour, taskDueByPanicIndex } from '../services/utils';
 
 const backendStore = useBackendStore();
 
@@ -19,6 +19,7 @@ const state = reactive({
     parentTask: {},
     childTasks: [],
     progress: -1,
+    taskPanicIndex: 0,
 })
 
 watchEffect(async () => {
@@ -31,6 +32,8 @@ watchEffect(async () => {
             state.childTasks.filter(childTask => childTask.isDone).length /
             state.childTasks.length
 
+        state.taskPanicIndex = taskDueByPanicIndex(state.task)
+
         state.isLoaded = true
     }
 })
@@ -38,7 +41,7 @@ watchEffect(async () => {
 
 <template>
     <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`"
-        class="block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4"
+        :class="`block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4 task-due-by-${state.taskPanicIndex}`"
         :data-task-id="taskId">
         <p v-if="state.parentTask !== null" class="text-2xs mb-2">
             <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
