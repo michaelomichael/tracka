@@ -139,7 +139,7 @@ async function archiveDoneTasks() {
         always active!
     -->
     <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
-        class="tracka-list rounded-xl w-70 min-w-50 p-4 m-6 relative bg-gray-400 snap-center"
+        class="tracka-list rounded-xl w-70 min-w-55 p-4 m-3 relative bg-gray-400 snap-center"
         :data-list-id="props.listId" v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists"
         itemKey="this" @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
         @xmove="handleMove" delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true"

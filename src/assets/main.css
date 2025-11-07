@@ -102,3 +102,13 @@ li.flex.bullets::before {
   font-size: 1em;
   line-height: 1;
 }
+
+.text-2xs {
+  font-size: 0.65rem;
+  line-height: calc(1 / 0.65);
+}
+
+.text-3xs {
+  font-size: 0.5rem;
+  line-height: calc(1 / 0.5);
+}

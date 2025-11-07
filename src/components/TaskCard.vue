@@ -40,11 +40,11 @@ watchEffect(async () => {
     <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`"
         class="block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4"
         :data-task-id="taskId">
-        <p v-if="state.parentTask !== null" class="text-xs mb-2">
+        <p v-if="state.parentTask !== null" class="text-2xs mb-2">
             <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
                 class="rounded-sm bg-emerald-500 hover:bg-emerald-900 text-amber-50 py-1 px-2"
-                :style="`background-color: ${stringToHslColour(state.parentTask.id)}`">
-                Parent: {{ state.parentTask.title }}
+                :style="`background-color: ${stringToHslColour(state.parentTask.id)}`" title="Parent">
+                {{ state.parentTask.title }}
             </RouterLink>
         </p>
         <h3 class="text-sm font-semibold  font-task-card-title">
