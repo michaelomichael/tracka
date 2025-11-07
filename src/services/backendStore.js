@@ -325,14 +325,31 @@ export const useBackendStore = defineStore('backendStore', () => {
     return getList(newList.id, true)
   }
 
-  async function addList(newList) {
+  async function addList(list) {
+    if (isEmpty(list?.name)) {
+      throw `[BackendStore.addList] New list must contain a valid name (got '${list?.name}')`
+    }
+
+    if (!isEmpty(list.id)) {
+      throw `[BackendStore.addList] The provided list already has an ID ('${list.id}')`
+    }
+
     // TODO: Figure out what to do when we're offline: it won't create the ID
     const newDocRef = doc(collection(db, 'lists'))
     log('New list ID is ', newDocRef.id)
-    newList.id = newDocRef.id
-    newList.ownerId = getAuth().currentUser.uid
-    newList.createdTimestamp = timestampNow()
-    newList.modifiedTimestamp = newList.createdTimestamp
+
+    const now = timestampNow()
+
+    const newList = {
+      id: newDocRef.id,
+      name: list.name,
+      taskIds: list.taskIds ?? [],
+      specialCategory: list.specialCategory ?? null,
+      order: list.order ?? _nextListOrderValue(_data.listsById),
+      ownerId: getAuth().currentUser.uid,
+      createdTimestamp: now,
+      modifiedTimestamp: now,
+    }
 
     await setDoc(newDocRef, newList)
     // const newRef = await addDoc(collection(db, 'lists'), newList)
@@ -796,4 +813,14 @@ function _validateList(list) {
 
 function _validateTask(task) {
   // TODO: implement this, and use it in more places above.
+}
+
+function _nextListOrderValue(listsById) {
+  const lists = Object.values(listsById)
+
+  if (lists.length === 0) {
+    return 0
+  } else {
+    return lists.reduce((maxSoFar, list) => Math.max(maxSoFar, list.order), -1) + 1
+  }
 }
