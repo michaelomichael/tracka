@@ -4,7 +4,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from '@/router'
 import 'vue-toastification/dist/index.css'
-import Toast, { TYPE } from 'vue-toastification'
+import Toast, { TYPE, useToast } from 'vue-toastification'
 import { createPinia } from 'pinia'
 import { Modal } from '@kouts/vue-modal'
 import PrimeVue from 'primevue/config'
@@ -20,6 +20,7 @@ app.use(PrimeVue, {
 })
 app.use(router)
 app.use(Toast, {
+  shareAppContext: true, // Enables it to find 'router' when passing custom Components as the toast text
   toastDefaults: {
     [TYPE.ERROR]: {
       timeout: 10000,
@@ -44,4 +45,17 @@ app.use(createPinia())
 app.component('Modal', Modal)
 app.component('Button', Button)
 app.component('DatePicker', DatePicker)
+
+app.config.errorHandler = (err, instance, info) => {
+  console.error('Global Vue error:', err, instance, info)
+
+  try {
+    const toast = useToast()
+    toast.error(`Error: ${err}\nSee console for more details`)
+  } catch (e) {
+    console.error('...and I failed to show an error toast', e)
+    alert('Error occurred. See the console for more details.')
+  }
+}
+
 app.mount('#app')

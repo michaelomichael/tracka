@@ -28,16 +28,20 @@ watchEffect(async () => {
         <h1>Archived Tasks</h1>
         <section v-if="state.isLoaded">
             <table class="border-collapse border-amber-700">
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Date archived</th>
-                </tr>
-                <tr v-for="task in state.archivedTasks">
-                    <td>{{ task.id }}</td>
-                    <td>{{ task.title }}</td>
-                    <td class="font-mono">{{ task.archivedTimestamp }}</td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Date archived</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="task in state.archivedTasks">
+                        <td>{{ task.id }}</td>
+                        <td>{{ task.title }}</td>
+                        <td class="font-mono">{{ task.archivedTimestamp }}</td>
+                    </tr>
+                </tbody>
             </table>
         </section>
 

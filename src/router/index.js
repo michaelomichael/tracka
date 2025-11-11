@@ -10,6 +10,8 @@ import SigninView from '../views/SigninView.vue'
 import { useToast } from 'vue-toastification'
 import { getCurrentUserOnceFirebaseHasLoaded } from '../services/utils'
 import ArchivedTasksView from '../views/ArchivedTasksView.vue'
+import QuickCreateTaskView from '../views/QuickCreateTaskView.vue'
+import Error404View from '../views/Error404View.vue'
 
 const toast = useToast()
 
@@ -78,6 +80,16 @@ const router = createRouter({
       path: '/auth/profile',
       name: 'user-profile',
       component: UserProfileView,
+    },
+    {
+      path: '/quickTask',
+      name: 'quick-create-task',
+      component: QuickCreateTaskView,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: '404',
+      component: Error404View,
     },
   ],
 })
