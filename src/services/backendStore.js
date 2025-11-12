@@ -389,11 +389,19 @@ export const useBackendStore = defineStore('backendStore', () => {
       const oldList = getList(originalTask.listId, true)
       const newList = getList(newTask.listId, true)
 
-      oldList.taskIds = oldList.taskIds.filter((childTaskId) => childTaskId !== taskId)
-      _saveList(oldList)
+      lists.value.forEach((list) => {
+        // It's safest to remove our task from ALL the lists where it
+        // might be.
+        const prevNumTaskIds = list.taskIds.length
+        list.taskIds = list.taskIds.filter((otherTaskId) => otherTaskId !== taskId)
 
-      newList.taskIds = [taskId, ...newList.taskIds]
-      _saveList(newList)
+        if (list.id === newTask.listId) {
+          list.taskIds = [newTask.id, ...newList.taskIds]
+          _saveList(oldList)
+        } else if (list.taskIds.length !== prevNumTaskIds) {
+          _saveList(oldList)
+        }
+      })
     }
 
     // Check to see if parent task has changed
