@@ -36,89 +36,6 @@ let credentials = {
   appId: import.meta.env['VITE_FIREBASE_APP_ID'],
 }
 
-const defaultData = {
-  lists: {
-    DONE: {
-      id: 'DONE',
-      name: 'Done',
-      taskIds: ['1000'],
-    },
-    BACKLOG: {
-      id: 'BACKLOG',
-      name: 'Backlog',
-      taskIds: ['2000', '3000'],
-    },
-    TODAY: {
-      id: 'TODAY',
-      name: 'Today',
-      taskIds: [],
-    },
-  },
-  tasks: {
-    1000: {
-      id: '1000',
-      title: 'Default task #1',
-      description: 'Description of default task #1',
-      listId: 'DONE',
-      parentTaskId: null,
-      childTaskIds: [],
-      isDone: true,
-    },
-    2000: {
-      id: '2000',
-      title: 'Default task #2',
-      description: 'Description of default task #2',
-      listId: 'BACKLOG',
-      parentTaskId: null,
-      childTaskIds: ['3000'],
-      isDone: false,
-    },
-    3000: {
-      id: '3000',
-      title: 'Default task #3',
-      description: 'Description of default task #3',
-      listId: 'BACKLOG',
-      parentTaskId: '2000',
-      childTaskIds: [],
-      isDone: false,
-    },
-  },
-}
-
-function addLotsOfTasks() {
-  const ids = new Array(25).fill('').map((_, index) => {
-    const id = `${5000 + index}`
-    setDoc(doc(db, 'tasks', id), {
-      id: id,
-      title: `Extra task #${index + 1}`,
-      description: `Description of extra task #${index + 1}`,
-      listId: 'BACKLOG',
-      parentTaskId: null,
-      childTaskIds: [],
-      isDone: false,
-    })
-    return id
-  })
-}
-
-async function repopulateCollection(collectionType) {
-  const snapshot = await getDocs(collection(db, collectionType))
-  const deletions = snapshot.docs.map((d) => deleteDoc(doc(db, collectionType, d.id)))
-  await Promise.all(deletions)
-
-  const writes = Object.values(defaultData[collectionType]).map((item) =>
-    setDoc(doc(db, collectionType, item.id), { ownerId: getAuth().currentUser.uid, ...item }),
-  )
-  await Promise.all(writes)
-}
-
-export async function resetDb() {
-  repopulateCollection('tasks')
-  repopulateCollection('lists')
-}
-
-//await resetDb()
-
 // TODO: Should this not be done in the main app script?
 export const firebaseApp = initializeApp(credentials)
 
@@ -198,7 +115,6 @@ export const useBackendStore = defineStore('backendStore', () => {
         // avoid duplicate listeners
         if (entityStatus.unsubscribeCallback === null) {
           entityStatus.unsubscribeCallback = onSnapshot(
-            //collection(db, collectionType),
             query(collection(db, collectionType), where('ownerId', '==', user.uid)),
             async (snapshot) => {
               log('Snapshot received')
@@ -806,7 +722,7 @@ function _handleDocChanges(snapshot, collectionType, containerObject) {
 }
 
 function _newOrOld(fieldName, newObject, oldObject) {
-  return newObject[fieldName] !== undefined ? newObject[fieldName] : oldObject[fieldName]
+  return newObject[fieldName] !== undefined ? newObject[fieldName] : (oldObject[fieldName] ?? null)
 }
 
 function _validateList(list) {
