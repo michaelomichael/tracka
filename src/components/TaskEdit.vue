@@ -70,7 +70,7 @@ watchEffect(() => {
             // The 'List' dropdown won't contain 'DONE', so set a sensible value
             // for listId in case the task was originally done and the user then
             // un-checks the checkbox.
-            form.listId = state.task.isDone ? 'TODAY' : state.task.listId;
+            form.listId = state.task.isDone ? backendStore.newItemsList.id : state.task.listId;
             form.parentTaskId = state.task.parentTaskId ?? null;
             form.isDueByEnabled = state.task.dueByTimestamp != null;
             form.dueByDate = (state.task.dueByTimestamp ?? timestampNow()).substring(0, 10)
