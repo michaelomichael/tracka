@@ -112,3 +112,8 @@ li.flex.bullets::before {
 .task-due-by-4 {
   background-color: red;
 }
+
+.Vue-Toastification__toast--success a,
+.Vue-Toastification__toast--error a {
+  color: white !important;
+}

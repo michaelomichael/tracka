@@ -3,7 +3,7 @@ import { reactive, watchEffect } from 'vue';
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
 import { useLogger } from "../services/logger";
-import HtmlCool from "../components/InlineHtml.vue";
+import InlineHtml from "../components/InlineHtml.vue";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
@@ -47,11 +47,11 @@ const handleSubmit = async () => {
         })
 
         toast.success({
-            component: HtmlCool,
+            component: InlineHtml,
             props: {
                 elements: [
                     "Created task ",
-                    { type: "a", href: `/tasks/${newTask.id}`, text: newTask.title },
+                    { type: "a", href: `/tasks/${newTask.id}/edit`, text: newTask.title },
                 ]
             },
 
@@ -91,7 +91,7 @@ const handleSubmit = async () => {
                 </div>
 
                 <div id="buttons" class="flex justify-center items-baseline">
-                    <Button>Save</Button>
+                    <Button type="submit">Save</Button>
                     <RouterLink to="/" class="mx-4">Cancel</RouterLink>
                 </div>
             </form>

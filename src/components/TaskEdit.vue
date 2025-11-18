@@ -162,11 +162,11 @@ const todaysDate = () => timestampNow().substring(0, 10)
     <section class="max-w-full m-auto">
         <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
             <div id="buttons" v-if="state.isNew" class="flex gap-2 items-baseline mb-4">
-                <button
+                <Button
                     class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
                     type="submit">
                     Create Task
-                </button>
+                </Button>
                 <RouterLink to="/">Cancel</RouterLink>
             </div>
 

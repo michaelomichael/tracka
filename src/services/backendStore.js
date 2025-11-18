@@ -21,6 +21,7 @@ import {
 } from './utils'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
+import { validateList } from './validator'
 
 const { log, info, warn } = useLogger('BackendStore')
 
@@ -219,7 +220,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     const originalList =
       typeof listIdOrObject === 'string' ? getList(listIdOrObject, true) : listIdOrObject
 
-    _validateList(originalList)
+    // TODO: Make sure we're using this in all the likely places
+    validateList(originalList, _data.tasksById)
 
     const newList = {
       ...originalList,
@@ -233,7 +235,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function _saveList(newList) {
     newList.modifiedTimestamp = timestampNow()
-    _validateList(newList)
+    validateList(newList, _data.tasksById)
 
     _data.listsById[newList.id] = newList
     updateDoc(doc(db, 'lists', newList.id), newList)
@@ -731,10 +733,6 @@ function _handleDocChanges(snapshot, collectionType, containerObject) {
 
 function _newOrOld(fieldName, newObject, oldObject) {
   return newObject[fieldName] !== undefined ? newObject[fieldName] : (oldObject[fieldName] ?? null)
-}
-
-function _validateList(list) {
-  // TODO: implement this, and use it in more places above.
 }
 
 function _validateTask(task) {

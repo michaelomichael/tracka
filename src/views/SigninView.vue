@@ -44,15 +44,15 @@ async function signInWithGoogle() {
 
 <template>
     <h1>Sign In</h1>
-    <section class="flex flex-col items-center gap-2">
+    <form class="flex flex-col items-center gap-2" @submit.prevent="signin">
         <input type="text" class="border rounded w-80 p-2 mb-2" placeholder=" Email" v-model="state.email" />
         <input type="password" class="border rounded w-80 p-2 mb-2" placeholder="Password" v-model="state.password" />
         <div class="flex gap-4">
-            <Button @click="signin">Submit</Button>
+            <Button type="submit">Submit</Button>
             <Button @click="signInWithGoogle">Sign In With Google</Button>
         </div>
         <div>
             Don't have an account? <RouterLink class="text-link" to="/auth/signup">Sign-up here.</RouterLink>
         </div>
-    </section>
+    </form>
 </template>
