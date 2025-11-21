@@ -2,7 +2,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 
 // Asserts that there is a single match on the given array after filtering
 // it using the given predicate.
-export const single = (arr, predicate) => {
+export const single = (arr, predicate, options) => {
   if (arr === null) {
     throw 'single: Array is null'
   }
@@ -20,7 +20,11 @@ export const single = (arr, predicate) => {
   } else {
     const msg = `single: After filtering, array has multiple (${result.length}) entries`
     console.error(msg, result)
-    throw msg
+    if (options?.failOnMultipleMatches !== false) {
+      throw msg
+    } else {
+      return result[0]
+    }
   }
 }
 
@@ -150,4 +154,21 @@ export function taskDueByPanicIndex(task) {
   } else {
     return 4
   }
+}
+
+export function formatDateForFilename(date) {
+  if (date == null) {
+    date = new Date()
+  }
+
+  const pad = (n) => String(n).padStart(2, '0')
+
+  const yyyy = date.getFullYear()
+  const mm = pad(date.getMonth() + 1)
+  const dd = pad(date.getDate())
+  const hh = pad(date.getHours())
+  const min = pad(date.getMinutes())
+  const ss = pad(date.getSeconds())
+
+  return `${yyyy}-${mm}-${dd} ${hh}.${min}.${ss}`
 }

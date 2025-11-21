@@ -5,6 +5,7 @@ import { onMounted } from 'vue';
 import SearchBox from './components/SearchBox.vue';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useLogger } from './services/logger';
+import { App as CapacitorApp } from '@capacitor/app'
 
 const router = useRouter()
 const route = useRoute()
@@ -23,6 +24,38 @@ onMounted(() => {
             }
         }
     })
+
+
+    document.addEventListener('androidIntent', (event) => {
+        const path = event.targetWebViewPath
+        log("### document received 'androidIntent' event with path", path, event)
+
+        if (path != null) {
+            router.push(path)
+        }
+    })
+    CapacitorApp.addListener('appUrlOpen', (event) => {
+        const url = event.url
+
+        log('In CapacitorApp.addListener(), event is ', event)
+        if (url.includes('/link/quickTask')) {
+            log('Routing event')
+            router.push('/quickTask')
+        }
+    })
+
+    CapacitorApp.getLaunchUrl().then((result) => {
+        log("In getLaunchUrl callback, result is", result)
+        if (!result || !result.url) {
+            return
+        }
+
+        const url = result.url;
+        if (url.includes('/link/quickTask')) {
+            log("Routing to /quickTask")
+            router.push('/quickTask')
+        }
+    });
 });
 
 </script>

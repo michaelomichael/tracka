@@ -50,11 +50,15 @@ export const useBackendStore = defineStore('backendStore', () => {
   const tasks = computed(() => Object.values(_data.tasksById))
 
   const doneList = computed(() =>
-    single(Object.values(_data.listsById), (list) => list.specialCategory === 'DONE'),
+    single(Object.values(_data.listsById), (list) => list.specialCategory === 'DONE', {
+      failOnMultipleMatches: false,
+    }),
   )
 
   const newItemsList = computed(() =>
-    single(Object.values(_data.listsById), (list) => list.specialCategory === 'TODAY'),
+    single(Object.values(_data.listsById), (list) => list.specialCategory === 'TODAY', {
+      failOnMultipleMatches: false,
+    }),
   )
 
   const _status = reactive({
@@ -228,6 +232,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       name: _newOrOld('name', changes, originalList),
       order: _newOrOld('order', changes, originalList),
       taskIds: _newOrOld('taskIds', changes, originalList),
+      version: originalList.version,
     }
 
     return _saveList(newList)
@@ -379,6 +384,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       childTaskIds: _newOrOld('childTaskIds', changes, originalTask),
       isDone: _newOrOld('isDone', changes, originalTask),
       dueByTimestamp: _newOrOld('dueByTimestamp', changes, originalTask),
+      version: originalTask.version,
     }
 
     newTask.doneTimestamp = newTask.isDone ? (originalTask.doneTimestamp ?? timestampNow()) : null
@@ -467,8 +473,9 @@ export const useBackendStore = defineStore('backendStore', () => {
    */
   function _saveTask(updatedTask) {
     updatedTask.modifiedTimestamp = timestampNow()
-    updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
+    updatedTask.version = (updatedTask.version ?? 0) + 1
     _data.tasksById[updatedTask.id] = updatedTask
+    updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
 
     // Return a fresh reactive copy
     return getTask(updatedTask.id, true)
@@ -609,13 +616,49 @@ export const useBackendStore = defineStore('backendStore', () => {
     defaultListNames.forEach(async (name, index) => {
       const specialCategory = name.toUpperCase()
       const allLists = Object.values(_data.listsById)
-      if (!allLists.find((list) => list.specialCategory === specialCategory)) {
-        info(`Creating default list '${specialCategory}'`)
+
+      const matchingLists = allLists.filter((list) => list.specialCategory === specialCategory)
+
+      if (matchingLists.length === 0) {
+        info(`Creating missing default list '${specialCategory}'`)
         await addList({
           name: name,
           specialCategory: specialCategory,
           taskIds: [],
           order: allLists.length + index,
+        })
+      } else if (matchingLists.length > 1) {
+        warn(
+          `Found multiple (${matchingLists.length}) default '${specialCategory}' lists! Will consolidate them.`,
+        )
+
+        // Pick the list with the most tasks to keep
+        const survivorList = matchingLists.reduce((longestList, thisList) => {
+          const thisLength = thisList.taskIds.length
+          log(`- '${specialCategory}' list ${thisList.id} has ${thisLength} task(s)`)
+          return longestList == null || thisLength > longestList.taskIds.length
+            ? thisList
+            : longestList
+        })
+
+        log(`Choosing list ${survivorList.id} to keep, as it has the most tasks.`)
+
+        matchingLists.forEach(async (list) => {
+          if (list.id !== survivorList.id) {
+            // Move non-clashing items across to the survivor list
+            list.taskIds.forEach(async (taskId) => {
+              const task = getTask(taskId, false)
+              if (task != null && survivorList.taskIds.indexOf(taskId) < 0) {
+                log(
+                  `- Moving task ${taskId} ('${task.title}') from list ${list.id} to ${survivorList.id}`,
+                )
+                await patchTask(task, { listId: survivorList.id })
+              }
+            })
+
+            log(`- Deleting duplicate '${specialCategory}' list ${list.id}`)
+            deleteList(list)
+          }
         })
       }
     })
@@ -673,6 +716,61 @@ export const useBackendStore = defineStore('backendStore', () => {
     })
   }
 
+  function createBackupJson() {
+    _ensureLoaded()
+    return JSON.stringify(_data, null, 2)
+  }
+
+  async function restoreFromBackupJson(jsonString) {
+    _ensureLoaded()
+    log('restoreFromBackupJson: starting')
+    const newData = JSON.parse(jsonString)
+
+    const collectionTypes = ['lists', 'tasks']
+    const mapNameFor = (collectionType) => `${collectionType}ById`
+
+    // Check the backup contents first
+    for (let collectionType of collectionTypes) {
+      const mapName = mapNameFor(collectionType)
+
+      if (newData[mapName] == null) {
+        throw `Backup must contain ${mapName}`
+      }
+
+      const numItems = Object.keys(newData[mapName]).length
+      log(`restoreFromBackupJson: backup contains ${numItems} in ${collectionType}`)
+    }
+
+    for (let collectionType of ['lists', 'tasks']) {
+      const mapName = mapNameFor(collectionType)
+
+      // 1. Delete existing items that aren't in our newData
+      Object.values(_data[mapName]).forEach((item) => {
+        const id = item.id
+        if (newData[mapName][id] == null) {
+          log(
+            `DELETING no-longer-referenced item from ${collectionType}: id ${id} ('${item.name ?? item.title}')`,
+          )
+          delete _data[mapName][id]
+          deleteDoc(doc(db, collectionType, id))
+        }
+      })
+
+      // 2. Add/set all items in our newData
+      Object.values(newData[mapName]).forEach((item) => {
+        const id = item.id
+        log(`Writing item to ${collectionType}: id ${id} ('${item.name ?? item.title}')`)
+        _data[mapName][id] = item
+        setDoc(doc(db, collectionType, id), item)
+      })
+    }
+
+    _checkDataIntegrity()
+    _createDefaultListsIfNecessary()
+
+    log('restoreFromBackupJson: complete')
+  }
+
   return {
     _data,
     _status,
@@ -698,6 +796,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     findTasks,
     archiveDoneTasks,
     getArchivedTasks,
+    createBackupJson,
+    restoreFromBackupJson,
   }
 })
 

@@ -162,7 +162,7 @@ function highlightPreviousMatch() {
 
 <template>
     <div class="w-full">
-        <input type="text" placeholder="Search for (or create) task..." v-model="state.searchTerm"
+        <input type="text" :placeholder="placeholderText" v-model="state.searchTerm"
             v-on:keydown.enter.prevent="selectHighlightedMatch()" v-on:keydown.down.prevent="highlightNextMatch()"
             v-on:keydown.up.prevent="highlightPreviousMatch()" class="w-full px-2 py-1 border-1 " />
 

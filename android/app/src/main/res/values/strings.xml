@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tracka</string>
+    <string name="title_activity_main">Tracka</string>
+    <string name="package_name">dev.michaelomichael.tracka</string>
+    <string name="custom_url_scheme">dev.michaelomichael.tracka</string>
+
+    <string name="quick_task_shortcut_short_label">Quick Task</string>
+    <string name="quick_task_shortcut_long_label">Quickly create a new task</string>
+</resources>

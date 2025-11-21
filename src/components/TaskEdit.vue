@@ -112,6 +112,20 @@ const handleSubmit = () => {
     router.push("/");
 }
 
+async function handleSetParentTask(newParentTaskId) {
+    log("handleSetParentTask: Requested to set parent task to ID:", newParentTaskId)
+    state.parentTask = backendStore.getTask(newParentTaskId, true)
+    form.parentTaskId = newParentTaskId
+    await handleChange()
+}
+
+async function handleRemoveLinkToParent() {
+    log("handleRemoveLinkToParent")
+    state.parentTask = null
+    form.parentTaskId = null
+    await handleChange()
+}
+
 async function handleAddExistingTaskToChildTasks(childTaskId) {
     log("handleAddExistingTaskToChildTasks: Requested to add a child task with ID:", childTaskId)
 
@@ -145,7 +159,7 @@ async function handleChange() {
         description: form.description,
         isDone: form.isDone,
         listId: form.isDone ? backendStore.doneList.id : form.listId,
-        parentTaskId: form.parentTaskId === "" ? null : form.parentTaskId,
+        parentTaskId: (form.parentTaskId ?? "") === "" ? null : form.parentTaskId,
         dueByTimestamp: form.isDueByEnabled ? `${dueByDate}T08:00:00Z` : null,
     };
     log("handleChange: updatedTaskFields is", updatedTaskFields)
@@ -198,21 +212,29 @@ const todaysDate = () => timestampNow().substring(0, 10)
             </div>
 
             <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline">
-                <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent</label>
-                <select v-model="form.parentTaskId" id="parentTaskId" name="parentTaskId" @change="handleChange()"
-                    class="border rounded w-full p-2">
-                    <option value=""></option>
-                    <option
-                        v-for="parentTask in backendStore.tasks.filter(possibleParentTask => possibleParentTask.id !== props.taskId && state.task?.childTaskIds.indexOf(possibleParentTask.id) < 0)"
-                        :key="parentTask.id" :value="parentTask.id">{{
-                            parentTask.title }}
-                    </option>
-                </select>
+                <div v-if="form.parentTaskId" class=" flex justify-between flex-nowrap gap-2 items-baseline">
+                    <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent Task:</label>
+                    <RouterLink :to="`/tasks/${form.parentTaskId}/edit`" class="text-link">
+                        {{ state.parentTask?.title ?? "Missing parent task!" }}
+                    </RouterLink>
+                    <span class="text-xs flex gap-1">
+                        <button type="button" title="Remove link to parent"
+                            class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"
+                            @click.prevent=" handleRemoveLinkToParent()">
+                            <i class="pi pi-angle-double-up"></i>
+                        </button>
+                    </span>
+                </div>
+                <div v-else class="w-full">
+                    <TaskPickerCombo class="w-80" placeholder-text="Search for (or create) parent task..."
+                        :excluded-task-ids="taskId == null ? [] : [taskId]" :exclude-done-tasks="true"
+                        :exclude-tasks-with-parents="false" @task-id-selected="handleSetParentTask" />
+                </div>
             </div>
 
             <div id="child-tasks-field" class="mb-4">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
-                <ul id="childTasks" v-if="state.childTasks.length">
+                <ul id="childTasks" v-if="state.childTasks.length" class="mb-2">
                     <li v-for="childTask in state.childTasks" :key="childTask.id"
                         class="flex bullets justify-between flex-nowrap items-baseline">
                         <RouterLink :to="`/tasks/${childTask.id}/edit`" class="text-link">
