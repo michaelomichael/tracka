@@ -43,6 +43,11 @@ h2 {
   font-weight: 500;
 }
 
+h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
 button {
   cursor: pointer;
 }

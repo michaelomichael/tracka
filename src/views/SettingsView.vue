@@ -7,6 +7,7 @@ import { formatDateForFilename } from "../services/utils";
 import { useLogger } from "../services/logger";
 import { useToast } from "vue-toastification";
 import { useRouter } from "vue-router";
+import { FileUpload } from "primevue";
 
 const { log, error } = useLogger()
 const backendStore = useBackendStore()
@@ -30,7 +31,7 @@ async function archiveOldTasks() {
     await backendStore.archiveDoneTasks()
 }
 
-function createBackup() {
+function downloadBackup() {
     const json = backendStore.createBackupJson()
     const blob = new Blob([json], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -46,7 +47,11 @@ function createBackup() {
 }
 
 function handleFileSelected(event) {
-    state.selectedFile = event.target.files[0]
+    state.selectedFile = event.files[0]
+}
+
+function handleCancelRestore() {
+    state.selectedFile = null
 }
 
 async function handleRestoreFromSelectedFile() {
@@ -57,6 +62,7 @@ async function handleRestoreFromSelectedFile() {
 
     try {
         await backendStore.restoreFromBackupJson(text)
+        state.selectedFile = null
         log("Restore completed")
         toast.success("Restore complete!")
         router.push("/")
@@ -65,7 +71,6 @@ async function handleRestoreFromSelectedFile() {
         toast.error(`Restore failed: ${e}`)
     }
 }
-
 </script>
 
 <template>
@@ -79,23 +84,32 @@ async function handleRestoreFromSelectedFile() {
             </section>
             <section class="mt-4">
                 <h2>Housekeeping</h2>
-                <div class="mt-4">
+                <div class="housekeeping-section">
                     <h3> Archiving </h3>
                     <Button @click.prevent="archiveOldTasks"> Archive Old Tasks </Button>
                 </div>
-                <div class="mt-4">
+                <div class="housekeeping-section">
                     <h3> Backup</h3>
-                    <Button @click.prevent="createBackup"> Backup </Button>
+                    <Button @click.prevent="downloadBackup"> Backup </Button>
                 </div>
-                <div class="mt-4">
+                <div class="housekeeping-section">
                     <h3> Restore</h3>
-                    <!-- TODO: Use https://primevue.org/fileupload/ -->
-                    <input type="file"
-                        className="text-sm text-stone-500 file:mr-5 file:py-1 file:px-3 file:border-[1px] file:text-xs file:font-medium file:bg-stone-50 file:text-stone-700 hover:file:cursor-pointer hover:file:bg-blue-50 hover:file:text-blue-700"
-                        @change="handleFileSelected" />
-                    <Button @click.prevent="handleRestoreFromSelectedFile" :disabled="!state.selectedFile"> Restore from
-                        Backup
-                    </Button>
+                    <div v-if="!state.selectedFile">
+                        <FileUpload choose-label="Select a backup file to restore" mode="basic"
+                            @select="handleFileSelected" customUpload auto severity="secondary"
+                            class="p-button-outlined" />
+                    </div>
+                    <div v-else>
+                        <div class="flex gap-2 items-baseline mb-4">
+                            <label class="font-semibold">Selected file:</label>
+                            <span>{{ state.selectedFile.name }}</span>
+                        </div>
+                        <div class="flex gap-2 items-baseline">
+                            <Button severity="danger" @click.prevent="handleRestoreFromSelectedFile"> Restore from this
+                                file </Button>
+                            <Button severity="secondary" @click.prevent="handleCancelRestore">Cancel</Button>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -103,3 +117,15 @@ async function handleRestoreFromSelectedFile() {
         <Loading v-else />
     </main>
 </template>
+
+<style scoped>
+@reference "tailwindcss";
+
+.housekeeping-section {
+    @apply mt-4 bg-gray-100 p-4 rounded;
+}
+
+.housekeeping-section h3 {
+    @apply mb-2;
+}
+</style>
