@@ -237,9 +237,12 @@ const todaysDate = () => timestampNow().substring(0, 10)
                 <ul id="childTasks" v-if="state.childTasks.length" class="mb-2">
                     <li v-for="childTask in state.childTasks" :key="childTask.id"
                         class="flex bullets justify-between flex-nowrap items-baseline">
-                        <RouterLink :to="`/tasks/${childTask.id}/edit`" class="text-link">
-                            {{ childTask.title }}
-                        </RouterLink>
+                        <span>
+                            ⟪{{ backendStore.getListForTask(childTask).name }}⟫
+                            <RouterLink :to="`/tasks/${childTask.id}/edit`" class="text-link">
+                                {{ childTask.title }}
+                            </RouterLink>
+                        </span>
                         <span class="text-xs flex gap-1">
                             <button type="button" title="Promote child to be parent-less"
                                 class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"

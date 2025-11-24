@@ -61,7 +61,7 @@ function handleTaskMovedToThisList(evt) {
 
     // If this is the DONE list, then we want to make sure that the task's `isDone` flag
     // is set to true. In other cases, make sure it's set to false.
-    // 
+    //
     // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
     // albeit the task will be inserted at the start of the new list.
     const isDone = props.listId === backendStore.doneList.id
@@ -82,6 +82,7 @@ function handleTaskOrderChanged() {
     log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
     backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
+
 function handleDragStart() {
     log(`handleDragStart`)
     // TODO: Is this still needed?
@@ -90,6 +91,7 @@ function handleDragStart() {
     // Disable snap-to-column scrolling otherwise it won't auto-scroll while dragging
     toggleSnapScrolling(false)
 }
+
 function handleDragEnd() {
     log(`handleDragEnd`)
     // TODO: Is this still needed?
@@ -138,42 +140,69 @@ async function archiveDoneTasks() {
         It had the opposite effect: SortableJS didn't work at all, and the system drag-and-drop was
         always active!
     -->
-    <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
-        class="tracka-list rounded-xl w-70 min-w-55 p-4 m-3 relative bg-gray-400 snap-center"
-        :data-list-id="props.listId" v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists"
-        itemKey="this" @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
-        delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60" multi-drag
-        @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
-        revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
-        <template #header>
+    <div
+        class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 snap-center">
+        <div class="relative">
+            <h2 class="text-xl font-semibold text-white text-center bg-gray-400">
+                {{ state.list.name }}
+            </h2>
+
+            <div class="absolute right-0 top-0 flex gap-1">
+                <!-- "Archive Done Tasks" button: -->
+                <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
+                    title="Archive Old 'DONE' Tasks"
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    <i class="pi pi-box"></i>
+                </button>
+
+                <!-- "Add Task" button: -->
+                <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    <i class="pi pi-plus"></i>
+                </RouterLink>
+            </div>
+        </div>
+        <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
+            class="tracka-list-items overflow-y-auto xmax-h-40 xmax-h-screen scroll" :data-list-id="props.listId"
+            v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
+            @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
+            delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60"
+            multi-drag @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
+            revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
+            <!-- <template #header>
             <div class="sticky top-0">
                 <h2 class="text-xl font-semibold text-white text-center bg-gray-400">
                     {{ state.list.name }}
                 </h2>
 
                 <div class="absolute right-0 top-0 flex gap-1">
-                    <!-- "Archive Done Tasks" button: -->
                     <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
                         title="Archive Old 'DONE' Tasks"
                         class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
                         <i class="pi pi-box"></i>
                     </button>
 
-                    <!-- "Add Task" button: -->
                     <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
                         class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
                         <i class="pi pi-plus"></i>
                     </RouterLink>
                 </div>
             </div>
-        </template>
-        <template #item="{ element }">
-            <TaskCard :taskId="element" />
-        </template>
-    </draggable>
+        </template> -->
+            <template #item="{ element }">
+                <TaskCard :taskId="element" />
+            </template>
+        </draggable>
+    </div>
 </template>
 
 <style scoped>
+.tracka-list-items {
+    scrollbar-width: none;
+
+    height: calc(100vh - var(--header-height) - 7rem);
+}
+
 .flip-list-move {
     transition: transform 0.5s;
 }

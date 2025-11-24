@@ -3,7 +3,7 @@ import { reactive, watchEffect } from 'vue';
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
 import { useLogger } from "../services/logger";
-import InlineHtml from "../components/InlineHtml.vue";
+import InlineHtml from "../components/widgets/InlineHtml.vue";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()

@@ -55,16 +55,18 @@ watchEffect(async () => {
             {{ state.task.title }}
         </h3>
 
-        <p class="text-xs"> {{ state.task.description }} </p>
+        <p class="text-xs overflow-x-clip"> {{ state.task.description }} </p>
 
         <div v-if="state.childTasks.length > 0" class="text-xs">
             <ProgressBar class="mt-2" :progress="state.progress" />
             <ul class="m-2 px-2">
                 <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
                     <!-- TODO: Add an icon beside each one if it's done -->
-                    <RouterLink :to="`/tasks/${childTask.id}/edit`">
-                        ({{ backendStore.getListForTask(childTask)?.name }}) {{ childTask.title }}
-                    </RouterLink>
+                    <span>
+                        <!-- <RouterLink :to="`/tasks/${childTask.id}/edit`"> -->
+                        ⟪{{ backendStore.getListForTask(childTask)?.name }}⟫ {{ childTask.title }}
+                        <!-- </RouterLink> -->
+                    </span>
                 </li>
             </ul>
         </div>

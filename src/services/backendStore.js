@@ -240,6 +240,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function _saveList(newList) {
     newList.modifiedTimestamp = timestampNow()
+    newList.version = (newList.version ?? 0) + 1
     validateList(newList, _data.tasksById)
 
     _data.listsById[newList.id] = newList
@@ -685,8 +686,19 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     Object.values(_data.tasksById).forEach((task) => {
       const descriptor = `Task '${task.title}' (id ${task.id})`
-      if (!_data.listsById[task.listId]) {
+      const list = _data.listsById[task.listId]
+
+      if (list == null) {
         addDataIntegrityWarning(`${descriptor} references unknown list ID '${task.listId}'`)
+      } else {
+        if (list.taskIds.indexOf(task.id) < 0) {
+          addDataIntegrityWarning(
+            `${descriptor} is not listed in the taskIds of its list (id ${task.listId})`,
+          )
+
+          // Try to add it in
+          patchList(list, { taskIds: [...list.taskIds, task.id] })
+        }
       }
 
       if (task.parentTaskId === task.id) {
