@@ -217,13 +217,11 @@ const todaysDate = () => timestampNow().substring(0, 10)
                     <RouterLink :to="`/tasks/${form.parentTaskId}/edit`" class="text-link">
                         {{ state.parentTask?.title ?? "Missing parent task!" }}
                     </RouterLink>
-                    <span class="text-xs flex gap-1">
-                        <button type="button" title="Remove link to parent"
-                            class="cursor-pointer rounded-4xl hover:bg-orange-50 w-6 h-6"
-                            @click.prevent=" handleRemoveLinkToParent()">
-                            <i class="pi pi-angle-double-up"></i>
-                        </button>
-                    </span>
+                    <button type="button" title="Remove link to parent"
+                        class="cursor-pointer rounded-4xl  hover:bg-orange-50 w-6 h-6"
+                        @click.prevent=" handleRemoveLinkToParent()">
+                        <i class="pi pi-times !text-xs"></i>
+                    </button>
                 </div>
                 <div v-else class="w-full">
                     <TaskPickerCombo class="w-80" placeholder-text="Search for (or create) parent task..."

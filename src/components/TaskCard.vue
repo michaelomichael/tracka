@@ -50,7 +50,7 @@ watchEffect(async () => {
                 {{ state.parentTask.title }}
             </RouterLink>
         </p>
-        <h3 class="text-sm font-semibold  font-task-card-title">
+        <h3 class="!text-sm font-semibold  font-task-card-title">
             <i v-if="state.task.isDone" class="pi pi-check-circle mr-1 bg-green-500 rounded-4xl" />
             {{ state.task.title }}
         </h3>
