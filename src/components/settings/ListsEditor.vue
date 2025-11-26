@@ -23,11 +23,11 @@ watchEffect(() => {
 async function handleOrderChanged() {
     log("New order is: ", JSON.stringify(state.sortableListIds))
 
-    state.sortableListIds.forEach((id, index) => {
+    state.sortableListIds.forEach(async (id, index) => {
         const list = backendStore.getList(id)
         if (list.order !== index) {
             log(`  - moving list '${id}' from pos ${list.order} to ${index}`)
-            backendStore.patchList(list, { order: index })
+            await backendStore.patchList(list, { order: index })
         }
     })
 }

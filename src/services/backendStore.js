@@ -9,6 +9,9 @@ import {
   deleteDoc,
   query,
   where,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
 } from 'firebase/firestore'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
@@ -39,6 +42,9 @@ let credentials = {
 
 // TODO: Should this not be done in the main app script?
 export const firebaseApp = initializeApp(credentials)
+initializeFirestore(firebaseApp, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+})
 
 const db = getFirestore(firebaseApp)
 
@@ -218,7 +224,7 @@ export const useBackendStore = defineStore('backendStore', () => {
    * sync the `listId` fields of those linked tasks; you should call
    * `patchTask()` to do this.
    */
-  function patchList(listIdOrObject, changes) {
+  async function patchList(listIdOrObject, changes) {
     _ensureLoaded()
 
     const originalList =
@@ -235,10 +241,10 @@ export const useBackendStore = defineStore('backendStore', () => {
       version: originalList.version,
     }
 
-    return _saveList(newList)
+    return await _saveList(newList)
   }
 
-  function _saveList(newList) {
+  async function _saveList(newList) {
     newList.modifiedTimestamp = timestampNow()
     newList.version = (newList.version ?? 0) + 1
     validateList(newList, _data.tasksById)
@@ -347,7 +353,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     const list = getList(newTask.listId, true)
     list.taskIds = [newTask.id, ...list.taskIds]
 
-    _saveList(list)
+    await _saveList(list)
 
     // Update links in the parent task (if any)
     const parentTask = getParentTaskForTask(newTask)
@@ -357,14 +363,14 @@ export const useBackendStore = defineStore('backendStore', () => {
     }
 
     // Update links in the child tasks (if any)
-    newTask.childTaskIds.forEach((childTaskId) => {
+    newTask.childTaskIds.forEach(async (childTaskId) => {
       const childTask = getTask(childTaskId, true)
       if (childTask.parentTaskId != null) {
         throw `[BackendStore.addTask] Trying to add child task '${childTaskId}' but that task already has a parent (id ${childTask.parentTaskId})`
       }
       // TODO: Other validation, e.g. make sure that the child task Id !== thisTaskId
       childTask.parentTaskId = newTask.id
-      _saveTask(childTask)
+      await _saveTask(childTask)
     })
 
     // Return a fresh copy (with proxy wrapper)
@@ -398,7 +404,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       const oldList = getList(originalTask.listId, true)
       const newList = getList(newTask.listId, true)
 
-      lists.value.forEach((list) => {
+      lists.value.forEach(async (list) => {
         // It's safest to remove our task from ALL the lists where it
         // might be.
         const prevNumTaskIds = list.taskIds.length
@@ -406,9 +412,9 @@ export const useBackendStore = defineStore('backendStore', () => {
 
         if (list.id === newTask.listId) {
           list.taskIds = [newTask.id, ...newList.taskIds]
-          _saveList(oldList)
+          await _saveList(oldList)
         } else if (list.taskIds.length !== prevNumTaskIds) {
-          _saveList(oldList)
+          await _saveList(oldList)
         }
       })
     }
@@ -423,13 +429,13 @@ export const useBackendStore = defineStore('backendStore', () => {
         const oldParentTask = getTask(originalTask.parentTaskId, true)
         oldParentTask.childTaskIds =
           oldParentTask.childTaskIds?.filter((childTaskId) => childTaskId !== taskId) ?? []
-        _saveTask(oldParentTask)
+        await _saveTask(oldParentTask)
       }
 
       if (newTask.parentTaskId != null) {
         const newParentTask = getTask(newTask.parentTaskId, true)
         newParentTask.childTaskIds = (newParentTask.childTaskIds ?? []).concat(taskId)
-        _saveTask(newParentTask)
+        await _saveTask(newParentTask)
       }
     }
 
@@ -439,32 +445,32 @@ export const useBackendStore = defineStore('backendStore', () => {
     const newChildTaskIds = new Set(newTask.childTaskIds)
 
     // Find tasks which are no longer children of this task
-    oldChildTaskIds.difference(newChildTaskIds).forEach((oldChildTaskId) => {
+    oldChildTaskIds.difference(newChildTaskIds).forEach(async (oldChildTaskId) => {
       const oldChildTask = getTask(oldChildTaskId, true)
       if (oldChildTask.parentTaskId === taskId) {
         log(
           `patchTask: Task '${oldChildTask.title}' (${oldChildTaskId}) should no longer be a child of '${newTask.title}' - will make it an orphan`,
         )
         oldChildTask.parentTaskId = null
-        _saveTask(oldChildTask)
+        await _saveTask(oldChildTask)
       }
     })
 
     // Make sure all the new child tasks are all correctly assigned to this one
-    newChildTaskIds.forEach((newChildTaskId) => {
+    newChildTaskIds.forEach(async (newChildTaskId) => {
       const newChildTask = getTask(newChildTaskId, true)
       if (newChildTask.parentTaskId !== taskId) {
         log(
           `patchTask: Task '${newChildTask.title}' (${newChildTaskId}) should now be made a child of '${newTask.title}'`,
         )
         newChildTask.parentTaskId = taskId
-        _saveTask(newChildTask)
+        await _saveTask(newChildTask)
       }
     })
 
     // TODO: Transactions? See https://firebase.google.com/docs/firestore/manage-data/transactions
 
-    return _saveTask(newTask)
+    return await _saveTask(newTask)
   }
 
   /**
@@ -472,11 +478,11 @@ export const useBackendStore = defineStore('backendStore', () => {
    * stored locally in _data, and returns that fresh reactive reference.
    * It doesn't attempt to sync any child/parent task IDs, or list IDs.
    */
-  function _saveTask(updatedTask) {
+  async function _saveTask(updatedTask) {
     updatedTask.modifiedTimestamp = timestampNow()
     updatedTask.version = (updatedTask.version ?? 0) + 1
     _data.tasksById[updatedTask.id] = updatedTask
-    updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
+    await updateDoc(doc(db, 'tasks', updatedTask.id), updatedTask)
 
     // Return a fresh reactive copy
     return getTask(updatedTask.id, true)
@@ -497,19 +503,19 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     const list = getListForTask(task)
 
-    deleteDoc(doc(db, 'tasks', task.id))
+    await deleteDoc(doc(db, 'tasks', task.id))
     delete _data.tasksById[task.id]
 
     list.taskIds = list.taskIds.filter((otherTaskId) => otherTaskId !== task.id)
     list.modifiedTimestamp = timestampNow()
-    _saveList(list)
+    await _saveList(list)
 
-    task.childTaskIds.forEach((childTaskId) => {
+    task.childTaskIds.forEach(async (childTaskId) => {
       const childTask = getTask(childTaskId)
       if (childTask != null) {
         childTask.parentTaskId = null
         childTask.modifiedTimestamp = timestampNow()
-        _saveTask(childTask)
+        await _saveTask(childTask)
       }
     })
   }
@@ -684,7 +690,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       })
     })
 
-    Object.values(_data.tasksById).forEach((task) => {
+    Object.values(_data.tasksById).forEach(async (task) => {
       const descriptor = `Task '${task.title}' (id ${task.id})`
       const list = _data.listsById[task.listId]
 
@@ -697,7 +703,7 @@ export const useBackendStore = defineStore('backendStore', () => {
           )
 
           // Try to add it in
-          patchList(list, { taskIds: [...list.taskIds, task.id] })
+          await patchList(list, { taskIds: [...list.taskIds, task.id] })
         }
       }
 

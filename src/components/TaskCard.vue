@@ -19,6 +19,7 @@ const state = reactive({
     parentTask: {},
     childTasks: [],
     progress: -1,
+    progress2: -1,
     taskPanicIndex: 0,
 })
 
@@ -31,6 +32,10 @@ watchEffect(async () => {
         state.progress =
             state.childTasks.filter(childTask => childTask.isDone).length /
             state.childTasks.length
+
+        state.progress2 = state.progress +
+            (state.childTasks.filter(childTask => backendStore.getListForTask(childTask)?.name?.toLowerCase() === "waiting").length /
+                state.childTasks.length)
 
         state.taskPanicIndex = taskDueByPanicIndex(state.task)
 
@@ -58,7 +63,7 @@ watchEffect(async () => {
         <p class="text-xs overflow-x-clip"> {{ state.task.description }} </p>
 
         <div v-if="state.childTasks.length > 0" class="text-xs">
-            <ProgressBar class="mt-2" :progress="state.progress" />
+            <ProgressBar class="mt-2" :progress="state.progress" :progress2="state.progress2" />
             <ul class="m-2 px-2">
                 <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
                     <!-- TODO: Add an icon beside each one if it's done -->

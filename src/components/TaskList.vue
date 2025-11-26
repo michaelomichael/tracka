@@ -55,7 +55,7 @@ function taskMatches(task, searchStringLowerCase) {
         task.description.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0
 }
 
-function handleTaskMovedToThisList(evt) {
+async function handleTaskMovedToThisList(evt) {
     const taskId = evt.clone.getAttribute("data-task-id");
     log(`handleTaskMovedToThisList: taskId=`, taskId);
 
@@ -75,12 +75,12 @@ function handleTaskMovedToThisList(evt) {
     );
 
     // Now set the correct order of tasks in the new list.
-    backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
+    await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
-function handleTaskOrderChanged() {
+async function handleTaskOrderChanged() {
     log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
-    backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
+    await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
 function handleDragStart() {
