@@ -42,6 +42,8 @@ const state = reactive({
 })
 
 const datePickerRef = ref(null)
+const parentTaskRef = ref(null)
+const childTasksRef = ref(null)
 
 const listNavigationButtons = []
 
@@ -118,14 +120,14 @@ async function handleSetParentTask(newParentTaskId) {
     log("handleSetParentTask: Requested to set parent task to ID:", newParentTaskId)
     state.parentTask = backendStore.getTask(newParentTaskId, true)
     form.parentTaskId = newParentTaskId
-    await handleChange()
+    await handleChange({ target: parentTaskRef.value })
 }
 
 async function handleRemoveLinkToParent() {
     log("handleRemoveLinkToParent")
     state.parentTask = null
     form.parentTaskId = null
-    await handleChange()
+    await handleChange({ target: parentTaskRef.value })
 }
 
 async function handleAddExistingTaskToChildTasks(childTaskId) {
@@ -170,8 +172,10 @@ async function handleChange(event) {
     };
     log("handleChange: updatedTaskFields is", updatedTaskFields)
 
-    await backendStore.patchTask(state.task.id, updatedTaskFields)
-    //toast.success(`Updated task '${updatedTaskFields.title}'`);
+    const updatedTask = await backendStore.patchTask(state.task.id, updatedTaskFields)
+
+    state.parentTask = backendStore.getParentTaskForTask(updatedTask)
+    state.childTasks = backendStore.getChildTasksForTask(updatedTask)
 
     addMiniToast(event.target);
 }
@@ -180,38 +184,6 @@ function addMiniToast(targetElem) {
     targetElem.classList.remove("flash-border", "highlight-border-fade");
     void targetElem.offsetWidth; // forces reflow
     targetElem.classList.add("flash-border");
-    // window.setTimeout(() => {
-    // targetElem.classList.add("highlight-border-fade");
-    //targetElem.classList.remove("highlight-border");
-    // }, 1000);
-
-    // window.setTimeout(() => {
-
-
-    //     window.setTimeout(() => {
-    //         targetElem.classList.remove("highlight-border-fade");
-    //     }, 1000);
-
-    // }, 1000);
-    // targetElem.classList.add("highlight-border-fade");
-    // targetElem.classList.remove("highlight-border");
-    // let miniToastContainer = targetElem.querySelector(".mini-toast");
-
-    // if (miniToastContainer == null) {
-    //     log("Adding mini toast to", targetElem);
-    //     targetElem.style.position = "relative"
-
-    //     miniToastContainer = document.createElement("div")
-    //     miniToastContainer.style.position = "absolute";
-    //     miniToastContainer.style.top = "0";
-    //     miniToastContainer.style.right = "0";
-    //     miniToastContainer.style.width = "2rem";
-    //     miniToastContainer.style.height = "2rem";
-    //     miniToastContainer.style.backgroundColor = "red";
-    //     miniToastContainer.innerHTML = "YUP";
-    //     targetElem.appendChild(miniToastContainer);
-    // }
-
 }
 
 const todaysDate = () => timestampNow().substring(0, 10)
@@ -257,7 +229,7 @@ const todaysDate = () => timestampNow().substring(0, 10)
                     @change="handleChange" class="border rounded w-full p-2" rows="4"></textarea>
             </div>
 
-            <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline">
+            <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline" ref="parentTaskRef">
                 <div v-if="form.parentTaskId" class=" flex justify-between flex-nowrap gap-2 items-baseline">
                     <label for="parentTaskId" class=" text-gray-700 font-bold mb-2">Parent Task:</label>
                     <RouterLink :to="`/tasks/${form.parentTaskId}/edit`" class="text-link">
@@ -276,7 +248,7 @@ const todaysDate = () => timestampNow().substring(0, 10)
                 </div>
             </div>
 
-            <div id="child-tasks-field" class="mb-4">
+            <div id="child-tasks-field" class="mb-4" ref="childTasksRef">
                 <label for="childTasks" class="block text-gray-700 font-bold mb-2">Child Tasks</label>
                 <ul id="childTasks" v-if="state.childTasks.length" class="mb-2">
                     <li v-for="childTask in state.childTasks" :key="childTask.id"
@@ -312,20 +284,3 @@ const todaysDate = () => timestampNow().substring(0, 10)
         </form>
     </section>
 </template>
-
-<style scoped>
-/* .p-inputtext.highlight-border {
-    background-color: purple !important;
-}
-
-.highlight-border {
-background-color: yellowgreen !important;
-}
-
-.highlight-border-fade {
-    background-color: white !important;
-    transition: background-color 1.5s ease;
-}
-
-*/
-</style>
