@@ -17,6 +17,7 @@ const form = reactive({
 });
 
 const state = reactive({
+    isLoaded: false,
 })
 
 watchEffect(() => {
@@ -29,6 +30,12 @@ const resetForm = () => {
     form.description = ""
     form.isDueByEnabled = false
     form.dueByDate = null
+}
+
+const handleCmdEnterInField = async (event) => {
+    if (event.metaKey && event.key === 'Enter') {
+        handleSubmit();
+    }
 }
 
 const handleSubmit = async () => {
@@ -76,12 +83,12 @@ const handleSubmit = async () => {
 
                 <div id="title-field" class="mb-4">
                     <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
-                        class="border rounded w-full p-2 mb-2" required autofocus />
+                        class="border rounded w-full p-2 mb-2" @keydown="handleCmdEnterInField" required autofocus />
                 </div>
 
                 <div id="description-field" class="mb-4">
                     <textarea v-model="form.description" id="description" name="description" placeholder="Description"
-                        class="border rounded w-full p-2" rows="4"></textarea>
+                        class="border rounded w-full p-2" rows="4" @keydown="handleCmdEnterInField"></textarea>
                 </div>
 
                 <div id="due-date-field" class="mb-4 flex gap-2 items-baseline">

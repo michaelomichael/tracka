@@ -93,7 +93,7 @@ watchEffect(() => {
     }
 })
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
     log("Submitting")
     const updatedTaskDetails = {
         title: form.title,
@@ -106,10 +106,10 @@ const handleSubmit = () => {
     };
 
     if (state.isNew) {
-        backendStore.addTask(updatedTaskDetails)
+        await backendStore.addTask(updatedTaskDetails)
         toast.success(`Created task '${updatedTaskDetails.title}'`);
     } else {
-        backendStore.patchTask(state.task.id, updatedTaskDetails);
+        await backendStore.patchTask(state.task.id, updatedTaskDetails);
         toast.success(`Updated task '${updatedTaskDetails.title}'`);
     }
 
@@ -148,6 +148,13 @@ async function handlePromoteChildToParentless(childTaskIdToBePromoted) {
 
 async function handleDateChange() {
     return handleChange({ target: datePickerRef.value.input });
+}
+
+async function handleCmdEnterInField(event) {
+    log("handleEnterInDescription(): event is", event);
+    if (event.metaKey && event.key === "Enter") {
+        await handleSubmit()
+    }
 }
 
 async function handleChange(event) {
@@ -220,13 +227,14 @@ const todaysDate = () => timestampNow().substring(0, 10)
 
             <div id="title-field" class="mb-4">
                 <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
-                    @change="handleChange" class="border rounded w-full p-2 mb-2" required
-                    v-bind:autofocus="state.isNew" />
+                    @change="handleChange" @keydown.capture="handleCmdEnterInField"
+                    class="border rounded w-full p-2 mb-2" required v-bind:autofocus="state.isNew" />
             </div>
 
             <div id="description-field" class="mb-4">
                 <textarea v-model="form.description" id="description" name="description" placeholder="Description"
-                    @change="handleChange" class="border rounded w-full p-2" rows="4"></textarea>
+                    @change="handleChange" @keydown.capture="handleCmdEnterInField" class="border rounded w-full p-2"
+                    rows="4"></textarea>
             </div>
 
             <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline" ref="parentTaskRef">
