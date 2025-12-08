@@ -141,9 +141,9 @@ async function archiveDoneTasks() {
         always active!
     -->
     <div
-        class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 snap-center">
+        class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 dark:bg-gray-700 snap-center">
         <div class="relative">
-            <h2 class="text-xl font-semibold text-white text-center bg-gray-400">
+            <h2 class="text-xl font-semibold text-white text-center bg-gray-400 dark:bg-gray-700">
                 {{ state.list.name }}
             </h2>
 
@@ -151,13 +151,13 @@ async function archiveDoneTasks() {
                 <!-- "Archive Done Tasks" button: -->
                 <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
                     title="Archive Old 'DONE' Tasks"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
                     <i class="pi pi-box"></i>
                 </button>
 
                 <!-- "Add Task" button: -->
                 <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
                     <i class="pi pi-plus"></i>
                 </RouterLink>
             </div>
@@ -169,29 +169,11 @@ async function archiveDoneTasks() {
             delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60"
             multi-drag @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
             revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
-            <!-- <template #header>
-            <div class="sticky top-0">
-                <h2 class="text-xl font-semibold text-white text-center bg-gray-400">
-                    {{ state.list.name }}
-                </h2>
 
-                <div class="absolute right-0 top-0 flex gap-1">
-                    <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
-                        title="Archive Old 'DONE' Tasks"
-                        class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                        <i class="pi pi-box"></i>
-                    </button>
-
-                    <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
-                        class="border-gray-500 border-1 cursor-pointer bg-gray-200 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                        <i class="pi pi-plus"></i>
-                    </RouterLink>
-                </div>
-            </div>
-        </template> -->
             <template #item="{ element }">
                 <TaskCard :taskId="element" />
             </template>
+
         </draggable>
     </div>
 </template>

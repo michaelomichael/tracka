@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watchEffect, computed } from "vue";
+import { reactive, watchEffect, computed, ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
@@ -40,6 +40,8 @@ const state = reactive({
     childTasks: [],
     isLoaded: false,
 })
+
+const datePickerRef = ref(null)
 
 const listNavigationButtons = []
 
@@ -142,13 +144,17 @@ async function handlePromoteChildToParentless(childTaskIdToBePromoted) {
     })
 }
 
-async function handleChange() {
+async function handleDateChange() {
+    return handleChange({ target: datePickerRef.value.input });
+}
+
+async function handleChange(event) {
     if (state.isNew) {
         log("handleChange: Task has not yet been created, so won't auto-save")
         return
     }
 
-    log("handleChange: form.dueByDate is", form.dueByDate)
+    log("handleChange: form.dueByDate is", form.dueByDate, event)
 
     const dueByDate = typeof (form.dueByDate) === "string"
         ? form.dueByDate
@@ -164,8 +170,48 @@ async function handleChange() {
     };
     log("handleChange: updatedTaskFields is", updatedTaskFields)
 
-    await backendStore.patchTask(state.task.id, updatedTaskFields);
-    toast.success(`Updated task '${updatedTaskFields.title}'`);
+    await backendStore.patchTask(state.task.id, updatedTaskFields)
+    //toast.success(`Updated task '${updatedTaskFields.title}'`);
+
+    addMiniToast(event.target);
+}
+
+function addMiniToast(targetElem) {
+    targetElem.classList.remove("flash-border", "highlight-border-fade");
+    void targetElem.offsetWidth; // forces reflow
+    targetElem.classList.add("flash-border");
+    // window.setTimeout(() => {
+    // targetElem.classList.add("highlight-border-fade");
+    //targetElem.classList.remove("highlight-border");
+    // }, 1000);
+
+    // window.setTimeout(() => {
+
+
+    //     window.setTimeout(() => {
+    //         targetElem.classList.remove("highlight-border-fade");
+    //     }, 1000);
+
+    // }, 1000);
+    // targetElem.classList.add("highlight-border-fade");
+    // targetElem.classList.remove("highlight-border");
+    // let miniToastContainer = targetElem.querySelector(".mini-toast");
+
+    // if (miniToastContainer == null) {
+    //     log("Adding mini toast to", targetElem);
+    //     targetElem.style.position = "relative"
+
+    //     miniToastContainer = document.createElement("div")
+    //     miniToastContainer.style.position = "absolute";
+    //     miniToastContainer.style.top = "0";
+    //     miniToastContainer.style.right = "0";
+    //     miniToastContainer.style.width = "2rem";
+    //     miniToastContainer.style.height = "2rem";
+    //     miniToastContainer.style.backgroundColor = "red";
+    //     miniToastContainer.innerHTML = "YUP";
+    //     targetElem.appendChild(miniToastContainer);
+    // }
+
 }
 
 const todaysDate = () => timestampNow().substring(0, 10)
@@ -186,12 +232,12 @@ const todaysDate = () => timestampNow().substring(0, 10)
 
             <div id="list-selection" class="flex gap-2 mb-4 items-stretch">
                 <div :class="`rounded-md border-1 p-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
-                    <input type="checkbox" id="done" v-model="form.isDone" @change="handleChange()"
+                    <input type="checkbox" id="done" v-model="form.isDone" @change="handleChange"
                         v-bind:autofocus="!state.isNew" />
                     <label for="done">Done?</label>
                 </div>
 
-                <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange()"
+                <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange"
                     class="border rounded w-full p-2" required>
                     <option v-for="list in backendStore.lists.filter(list => list.id !== backendStore.doneList.id)"
                         :key="list.id" :value="list.id">{{
@@ -202,13 +248,13 @@ const todaysDate = () => timestampNow().substring(0, 10)
 
             <div id="title-field" class="mb-4">
                 <input v-model="form.title" type="text" id="title" name="title" placeholder="Task title"
-                    @change="handleChange()" class="border rounded w-full p-2 mb-2" required
+                    @change="handleChange" class="border rounded w-full p-2 mb-2" required
                     v-bind:autofocus="state.isNew" />
             </div>
 
             <div id="description-field" class="mb-4">
                 <textarea v-model="form.description" id="description" name="description" placeholder="Description"
-                    @change="handleChange()" class="border rounded w-full p-2" rows="4"></textarea>
+                    @change="handleChange" class="border rounded w-full p-2" rows="4"></textarea>
             </div>
 
             <div id="parent-task-field" class="mb-4 flex gap-2 items-baseline">
@@ -258,11 +304,28 @@ const todaysDate = () => timestampNow().substring(0, 10)
             </div>
 
             <div id="due-date-field" class="mb-4 flex gap-2 items-baseline">
-                <input type="checkbox" id="due-date-enabled" v-model="form.isDueByEnabled" @change="handleChange()" />
+                <input type="checkbox" id="due-date-enabled" v-model="form.isDueByEnabled" @change="handleChange" />
                 <label for="due-date-enabled">Due date{{ form.isDueByEnabled ? ':' : '' }} </label>
-                <DatePicker v-if="form.isDueByEnabled" v-model="form.dueByDate" fluid date-format="yy-mm-dd"
-                    @value-change="console.log('##### value changed!'); handleChange()" />
+                <DatePicker v-if="form.isDueByEnabled" ref="datePickerRef" v-model="form.dueByDate" fluid
+                    date-format="yy-mm-dd" @value-change="handleDateChange" />
             </div>
         </form>
     </section>
 </template>
+
+<style scoped>
+/* .p-inputtext.highlight-border {
+    background-color: purple !important;
+}
+
+.highlight-border {
+background-color: yellowgreen !important;
+}
+
+.highlight-border-fade {
+    background-color: white !important;
+    transition: background-color 1.5s ease;
+}
+
+*/
+</style>

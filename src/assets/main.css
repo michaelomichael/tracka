@@ -122,3 +122,30 @@ li.flex.bullets::before {
 .Vue-Toastification__toast--error a {
   color: white !important;
 }
+
+.highlight-border {
+  /* border-color: red !important;
+    transition: border-color 0.6s ease; */
+  background-color: yellowgreen !important;
+}
+
+.highlight-border-fade {
+  background-color: white !important;
+  transition: background-color 2.5s ease;
+}
+
+.flash-border {
+  animation: flashBorder 1s ease;
+}
+
+@keyframes flashBorder {
+  0% {
+    background-color: white;
+  }
+  10% {
+    background-color: rgb(76, 175, 80);
+  }
+  100% {
+    background-color: white;
+  }
+}

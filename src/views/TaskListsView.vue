@@ -75,7 +75,8 @@ function handleModalClose(eventName, other) {
         <!-- Docs at https://next--vue-modal-demo.netlify.app/ -->
         <Modal v-model="state.showEditor" :title="state.editingTaskId ? 'Edit Task' : 'Create Task'"
             @closing="handleModalClose()" @before-close="handleModalClose()" @closed="handleModalClose()"
-            @update:modelValue="(x) => handleModalClose('update: modelValue', x)">
+            @update:modelValue="(x) => handleModalClose('update: modelValue', x)"
+            modalClass="dark:!bg-gray-900 dark:!border-gray-500 border-2" bgClass="!bg-black opacity-80">
             <TaskEdit :taskId="state.editingTaskId" :listId="state.newTaskListId" />
         </Modal>
     </section>

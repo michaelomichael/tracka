@@ -137,7 +137,7 @@ export function isBlank(value) {
 }
 
 export function taskDueByPanicIndex(task) {
-  if (task.dueByTimestamp == null) {
+  if (task?.dueByTimestamp == null) {
     return 0
   }
 

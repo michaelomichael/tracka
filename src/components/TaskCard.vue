@@ -3,8 +3,10 @@ import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './widgets/ProgressBar.vue';
 import { stringToHslColour, taskDueByPanicIndex } from '../services/utils';
+import { useLogger } from "../services/logger";
 
 const backendStore = useBackendStore();
+const { log, warn } = useLogger();
 
 const props = defineProps({
     taskId: {
@@ -26,6 +28,11 @@ const state = reactive({
 watchEffect(async () => {
     if (backendStore.isLoaded) {
         state.task = backendStore.getTask(props.taskId);
+
+        if (state.task == null) {
+            warn(`In watchEffect(), task for id '${props.taskId}' is null`);
+            return;
+        }
         state.parentTask = backendStore.getParentTaskForTask(state.task)
         state.childTasks = backendStore.getChildTasksForTask(state.task)
 
@@ -46,7 +53,7 @@ watchEffect(async () => {
 
 <template>
     <RouterLink v-if="state.isLoaded" :to="`/tasks/${taskId}/edit`"
-        :class="`block bg-task-card hover:bg-gray-200 rounded-md my-4 border-color-task-box border-2 p-4 task-due-by-${state.taskPanicIndex}`"
+        :class="`block bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-600 dark:border-gray-500 rounded-md my-4 border-2 p-4 task-due-by-${state.taskPanicIndex}`"
         :data-task-id="taskId">
         <p v-if="state.parentTask !== null" class="text-2xs mb-2">
             <RouterLink :to="`/tasks/${state.parentTask.id}/edit`"
