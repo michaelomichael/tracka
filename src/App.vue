@@ -3,16 +3,23 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useBackendStore } from './services/backendStore';
 import { onMounted } from 'vue';
 import SearchBox from './components/SearchBox.vue';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { useLogger } from './services/logger';
 import { App as CapacitorApp } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 
 const router = useRouter()
 const route = useRoute()
 const backendStore = useBackendStore()
 const { log } = useLogger()
 
-onMounted(() => {
+onMounted(async () => {
+    if (Capacitor.isNativePlatform()) {
+        log("Native platform, so will check if there has been a redirect to us after a successful auth")
+        const result = await getRedirectResult(getAuth());
+        log("Google redirect result is", result)
+    }
+
     backendStore.init()
 
     // Watch for user logout
@@ -25,7 +32,7 @@ onMounted(() => {
         }
     })
 
-
+    // TODO: Go back and figure out which of these should be kept
     document.addEventListener('androidIntent', (event) => {
         const path = event.targetWebViewPath
         log("### document received 'androidIntent' event with path", path, event)
@@ -34,6 +41,7 @@ onMounted(() => {
             router.push(path)
         }
     })
+
     CapacitorApp.addListener('appUrlOpen', (event) => {
         const url = event.url
 

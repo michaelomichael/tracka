@@ -6,5 +6,9 @@
     "StatusBar": {
       "overlaysWebView": false
     }
+  },
+  "server": {
+    "url": "dev.michaelomichael.tracka://auth",
+    "cleartext": true
   }
 }

@@ -1,6 +1,7 @@
 <script setup>
 import { reactive } from 'vue';
-import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useLogger } from '../services/logger';
@@ -29,9 +30,33 @@ async function signin() {
 }
 
 async function signInWithGoogle() {
-    log("Signing in with Google...")
+    if (Capacitor.isNativePlatform()) {
+        await signInWithGoogleRedirect()
+    } else {
+        await signInWithGooglePopup()
+    }
+    log("Finished signing in with Google")
+}
+
+async function signInWithGooglePopup() {
+    log("Signing in with Google popup...")
+
     try {
         const result = await signInWithPopup(getAuth(), new GoogleAuthProvider())
+        log("Got Google sign-in result", result)
+        toast.success("Successfully logged in")
+        router.push("/")
+    } catch (e) {
+        error("Failed to login with Google:", e)
+        toast.error(`Login failed:\n\n${e.message}`)
+    }
+}
+
+async function signInWithGoogleRedirect() {
+    log("Signing in with Google redirect...")
+
+    try {
+        const result = await signInWithRedirect(getAuth(), new GoogleAuthProvider())
         log("Got Google sign-in result", result)
         toast.success("Successfully logged in")
         router.push("/")

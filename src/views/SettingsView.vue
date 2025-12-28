@@ -36,7 +36,7 @@ import DataArchiveDoneTasks from "../components/settings/DataArchiveDoneTasks.vu
 @reference "tailwindcss";
 
 .housekeeping-section {
-    @apply mt-4 bg-gray-100 p-4 rounded;
+    @apply mt-4 bg-gray-100 dark:bg-gray-900 p-4 rounded;
 }
 
 .housekeeping-section h3 {

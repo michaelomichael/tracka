@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// Load secret properties
+def secretPropertiesFile = file('../gradle-secret.properties')
+def secretProperties = new Properties()
+secretProperties.load(secretPropertiesFile.newInputStream())
+secretProperties.each { key, value ->
+    project.ext[key] = value
+}
+
 android {
     namespace "dev.michaelomichael.tracka"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,8 +24,18 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
+    signingConfigs {
+        release {
+            storeFile file(TRACKA_SIGNING_KEYSTORE_FILE)
+            storePassword TRACKA_SIGNING_KEYSTORE_PASSWORD
+            keyAlias TRACKA_SIGNING_KEY_ALIAS
+            keyPassword TRACKA_SIGNING_KEY_PASSWORD
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
