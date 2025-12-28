@@ -36,6 +36,11 @@ const router = createRouter({
       redirect: '/',
     },
     {
+      path: '/lists/:listId/edit',
+      name: 'edit-list',
+      component: TaskListsView,
+    },
+    {
       path: '/tasks/:taskId/edit',
       name: 'edit-task',
       component: TaskListsView,

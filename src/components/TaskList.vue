@@ -13,115 +13,115 @@ const route = useRoute()
 const toast = useToast()
 
 const props = defineProps({
-    listId: {
-        type: String,
-        required: true,
-    },
+  listId: {
+    type: String,
+    required: true,
+  },
 });
 
 const state = reactive({
-    isLoaded: false,
-    isFiltered: false,
-    searchString: null,
-    taskIdsSortableList: [],
-    list: {},
+  isLoaded: false,
+  isFiltered: false,
+  searchString: null,
+  taskIdsSortableList: [],
+  list: {},
 })
 
 watchEffect(() => {
-    if (backendStore.isLoaded) {
-        state.list = backendStore.getList(props.listId)
+  if (backendStore.isLoaded) {
+    state.list = backendStore.getList(props.listId)
 
-        const searchString = route.query.search?.trim()
+    const searchString = route.query.search?.trim()
 
-        if (searchString != null && searchString.length > 0) {
-            state.isFiltered = true
-            state.searchString = searchString
-            const searchStringLowerCase = searchString.toLocaleLowerCase()
-            state.taskIdsSortableList = state.list.taskIds.filter(taskId =>
-                taskMatches(backendStore.getTask(taskId), searchStringLowerCase)
-            )
-        } else {
-            state.isFiltered = false
-            state.searchString = null
-            state.taskIdsSortableList = state.list.taskIds; // v-model won't change the original state.list.taskIds :)
-        }
-
-        state.isLoaded = true
+    if (searchString != null && searchString.length > 0) {
+      state.isFiltered = true
+      state.searchString = searchString
+      const searchStringLowerCase = searchString.toLocaleLowerCase()
+      state.taskIdsSortableList = state.list.taskIds.filter(taskId =>
+        taskMatches(backendStore.getTask(taskId), searchStringLowerCase)
+      )
+    } else {
+      state.isFiltered = false
+      state.searchString = null
+      state.taskIdsSortableList = state.list.taskIds; // v-model won't change the original state.list.taskIds :)
     }
+
+    state.isLoaded = true
+  }
 })
 
 function taskMatches(task, searchStringLowerCase) {
-    return task.title.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0 ||
-        task.description.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0
+  return task.title.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0 ||
+    task.description.toLocaleLowerCase().indexOf(searchStringLowerCase) >= 0
 }
 
 async function handleTaskMovedToThisList(evt) {
-    const taskId = evt.clone.getAttribute("data-task-id");
-    log(`handleTaskMovedToThisList: taskId=`, taskId);
+  const taskId = evt.clone.getAttribute("data-task-id");
+  log(`handleTaskMovedToThisList: taskId=`, taskId);
 
-    // If this is the DONE list, then we want to make sure that the task's `isDone` flag
-    // is set to true. In other cases, make sure it's set to false.
-    //
-    // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
-    // albeit the task will be inserted at the start of the new list.
-    const isDone = props.listId === backendStore.doneList.id
+  // If this is the DONE list, then we want to make sure that the task's `isDone` flag
+  // is set to true. In other cases, make sure it's set to false.
+  //
+  // Move the task to its new list first. This will automatically update the taskIds array in both the old and new lists,
+  // albeit the task will be inserted at the start of the new list.
+  const isDone = props.listId === backendStore.doneList.id
 
-    backendStore.patchTask(
-        taskId,
-        {
-            listId: props.listId,
-            isDone: isDone,
-        }
-    );
+  backendStore.patchTask(
+    taskId,
+    {
+      listId: props.listId,
+      isDone: isDone,
+    }
+  );
 
-    // Now set the correct order of tasks in the new list.
-    await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
+  // Now set the correct order of tasks in the new list.
+  await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
 async function handleTaskOrderChanged() {
-    log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
-    await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
+  log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
+  await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 
 function handleDragStart() {
-    log(`handleDragStart`)
-    // TODO: Is this still needed?
-    document.body.classList.add("dragging")
+  log(`handleDragStart`)
+  // TODO: Is this still needed?
+  document.body.classList.add("dragging")
 
-    // Disable snap-to-column scrolling otherwise it won't auto-scroll while dragging
-    toggleSnapScrolling(false)
+  // Disable snap-to-column scrolling otherwise it won't auto-scroll while dragging
+  toggleSnapScrolling(false)
 }
 
 function handleDragEnd() {
-    log(`handleDragEnd`)
-    // TODO: Is this still needed?
-    document.body.classList.remove("dragging")
+  log(`handleDragEnd`)
+  // TODO: Is this still needed?
+  document.body.classList.remove("dragging")
 
-    toggleSnapScrolling(true)
+  toggleSnapScrolling(true)
 }
 
 function toggleSnapScrolling(enabled) {
-    setTimeout(() => {
-        const classList = document.querySelector("#app > div > main").classList
-        classList.toggle("scroll-smooth", enabled)
-        classList.toggle("snap-x", enabled)
-        classList.toggle("snap-mandatory", enabled)
-    }, 100)
+  setTimeout(() => {
+    const classList = document.querySelector("#app > div > main").classList
+    classList.toggle("scroll-smooth", enabled)
+    classList.toggle("snap-x", enabled)
+    classList.toggle("snap-mandatory", enabled)
+  }, 100)
 }
 
 async function archiveDoneTasks() {
-    const numAffected = await backendStore.archiveDoneTasks()
+  const numAffected = await backendStore.archiveDoneTasks()
 
-    if (numAffected === 0) {
-        toast.success("There were no suitable tasks to archive")
-    } else {
-        toast.success(`Archived ${numAffected} ${numAffected === 1 ? "task" : "tasks"}`)
-    }
+  if (numAffected === 0) {
+    toast.success("There were no suitable tasks to archive")
+  } else {
+    toast.success(`Archived ${numAffected} ${numAffected === 1 ? "task" : "tasks"}`)
+  }
 }
 </script>
 
 <template>
-    <!--
+  <!--
     Rationale for some of the settings below:
         * @contextmenu.prevent:
         Added to prevent a long press on Android browser from triggering the context menu.
@@ -140,90 +140,93 @@ async function archiveDoneTasks() {
         It had the opposite effect: SortableJS didn't work at all, and the system drag-and-drop was
         always active!
     -->
-    <div
-        class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 dark:bg-gray-700 snap-center">
-        <div class="relative">
-            <h2 class="text-xl font-semibold text-white text-center bg-gray-400 dark:bg-gray-700">
-                {{ state.list.name }}
-            </h2>
+  <div
+    class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 dark:bg-gray-700 snap-center">
+    <div class="relative">
+      <h2 class="text-xl font-semibold text-white text-center bg-gray-400 dark:bg-gray-700">
+        <RouterLink v-if="state.list.specialCategory == null" :to="`/lists/${state.list.id}/edit`">
+          {{ state.list.name }}
+        </RouterLink>
+        <span v-else>{{ state.list.name }}</span>
+      </h2>
 
-            <div class="absolute right-0 top-0 flex gap-1">
-                <!-- "Archive Done Tasks" button: -->
-                <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
-                    title="Archive Old 'DONE' Tasks"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                    <i class="pi pi-box"></i>
-                </button>
+      <div class="absolute right-0 top-0 flex gap-1">
+        <!-- "Archive Done Tasks" button: -->
+        <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
+          title="Archive Old 'DONE' Tasks"
+          class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+          <i class="pi pi-box"></i>
+        </button>
 
-                <!-- "Add Task" button: -->
-                <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
-                    class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
-                    <i class="pi pi-plus"></i>
-                </RouterLink>
-            </div>
-        </div>
-        <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
-            class="tracka-list-items overflow-y-auto xmax-h-40 xmax-h-screen scroll" :data-list-id="props.listId"
-            v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
-            @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
-            delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60"
-            multi-drag @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
-            revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
-
-            <template #item="{ element }">
-                <TaskCard :taskId="element" />
-            </template>
-
-        </draggable>
+        <!-- "Add Task" button: -->
+        <RouterLink :to="`/tasks/new?listId=${state.list.id}`" title="Add Task"
+          class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
+          <i class="pi pi-plus"></i>
+        </RouterLink>
+      </div>
     </div>
+    <draggable v-if="state.isLoaded && (state.taskIdsSortableList.length > 0 || !state.isFiltered)"
+      class="tracka-list-items overflow-y-auto xmax-h-40 xmax-h-screen scroll" :data-list-id="props.listId"
+      v-model="state.taskIdsSortableList" tag="section" group="task-cards-onto-lists" itemKey="this"
+      @add="handleTaskMovedToThisList" @update="handleTaskOrderChanged" animation="200" delay="300"
+      delayOnTouchOnly="true" forceAutoScrollFallback="true" forceFallback="true" xscrollSensitivity="60" multi-drag
+      @dragstart.prevent @contextmenu.prevent xdraggable="false" multiDragKey="Alt" xscrollSpeed="460"
+      revertOnSpill="true" @start="handleDragStart" @end="handleDragEnd">
+
+      <template #item="{ element }">
+        <TaskCard :taskId="element" />
+      </template>
+
+    </draggable>
+  </div>
 </template>
 
 <style scoped>
 .tracka-list-items {
-    scrollbar-width: none;
+  scrollbar-width: none;
 
-    height: calc(100vh - var(--header-height) - 7rem);
+  height: calc(100vh - var(--header-height) - 7rem);
 }
 
 .flip-list-move {
-    transition: transform 0.5s;
+  transition: transform 0.5s;
 }
 
 .no-move {
-    transition: transform 0s;
+  transition: transform 0s;
 }
 
 /* Styles for the placeholder spot where the dragged item would be inserted into the list if it were to be 
    dropped at its current coordinates */
 .sortable-ghost {
-    background: transparent !important;
-    color: transparent;
-    outline-offset: 1px;
-    outline-width: 3px;
-    outline-style: dashed;
-    outline-color: black;
-    /* TODO: Different colours for when it's dark mode */
+  background: transparent !important;
+  color: transparent;
+  outline-offset: 1px;
+  outline-width: 3px;
+  outline-style: dashed;
+  outline-color: black;
+  /* TODO: Different colours for when it's dark mode */
 }
 
 .sortable-ghost * {
-    opacity: 0;
+  opacity: 0;
 }
 
 .sortable-fallback {
-    opacity: 0.5;
-    background: aliceblue !important;
+  opacity: 0.5;
+  background: aliceblue !important;
 }
 
 .xsortable-chosen {
-    opacity: 0.5;
-    background: red !important;
+  opacity: 0.5;
+  background: red !important;
 }
 
 /* Styles for the item when it's being dragged around the screen */
 .sortable-drag {
-    opacity: 0.7;
-    xtransform: scale(0.5) !important;
-    cursor: move;
-    background: orange !important;
+  opacity: 0.7;
+  xtransform: scale(0.5) !important;
+  cursor: move;
+  background: orange !important;
 }
 </style>

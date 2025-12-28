@@ -520,6 +520,42 @@ export const useBackendStore = defineStore('backendStore', () => {
     })
   }
 
+  async function moveTasks(sourceListIdOrObject, targetListIdOrObject) {
+    _ensureLoaded()
+
+    const sourceList =
+      typeof sourceListIdOrObject === 'string'
+        ? getList(sourceListIdOrObject, true)
+        : sourceListIdOrObject
+
+    const targetList =
+      typeof targetListIdOrObject === 'string'
+        ? getList(targetListIdOrObject, true)
+        : targetListIdOrObject
+
+    if (sourceList.id === targetList.id) {
+      warn('moveTasks: Source and target lists are the same; no action taken')
+      return
+    }
+
+    const taskIds = [...sourceList.taskIds]
+    taskIds.forEach(async (taskId) => {
+      const task = getTask(taskId, true)
+
+      task.listId = targetList.id
+      task.isDone = targetList.specialCategory === 'DONE'
+      await _saveTask(task)
+    })
+
+    sourceList.taskIds = []
+    await _saveList(sourceList)
+
+    targetList.taskIds = [...taskIds, ...targetList.taskIds]
+    await _saveList(targetList)
+
+    console.log('moveTasks: Finished moving tasks from', sourceList, 'to', targetList)
+  }
+
   function findTasks(searchString) {
     _ensureLoaded()
     const lowerCaseSearchString = searchString.toLocaleLowerCase()
@@ -812,6 +848,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     patchTask,
     deleteTask,
     findTasks,
+    moveTasks,
     archiveDoneTasks,
     getArchivedTasks,
     createBackupJson,

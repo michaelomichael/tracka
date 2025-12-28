@@ -46,6 +46,7 @@ const shouldBeEnumString = (obj, propertyName, ...allowedValues) => {
 }
 
 export const validateList = (list, allTasksById) => {
+  console.log('Validating list: ', list)
   /*
     id?
     name
@@ -61,10 +62,8 @@ export const validateList = (list, allTasksById) => {
   shouldBeArray(list, 'taskIds')
   shouldNotContainDuplicates(list, 'taskIds')
 
-  if (list.hasOwnProperty('specialCategory')) {
-    if (list.hasOwnProperty('specialCategory') !== null) {
-      shouldBeEnumString(list, 'specialCategory', 'DONE', 'TODAY', 'BACKLOG')
-    }
+  if (list.specialCategory != null) {
+    shouldBeEnumString(list, 'specialCategory', 'DONE', 'TODAY', 'BACKLOG')
   }
 
   list.taskIds.forEach((taskId) => {
