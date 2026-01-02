@@ -91,6 +91,45 @@ export function numDaysUntil(targetDate, optionalReferenceDate) {
   return Math.floor((targetUnixTimeAtMidnight - referenceUnixTimeAtMidnight) / NUM_MILLIS_PER_DAY)
 }
 
+export function toDueDateDescription(dueByTimestamp) {
+  if (dueByTimestamp == null) {
+    return null
+  }
+
+  const dueDate = new Date(Date.parse(dueByTimestamp))
+  const daysUntil = numDaysUntil(dueDate)
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]
+
+  if (daysUntil === 0) {
+    return 'Due today'
+  } else if (daysUntil === 1) {
+    return 'Due tomorrow'
+  } else if (daysUntil >= 365) {
+    return `Due on ${dueDate.getDate()} ${months[dueDate.getMonth()]} ${dueDate.getFullYear()}`
+  } else if (daysUntil > 20) {
+    return `Due on ${dueDate.getDate()} ${months[dueDate.getMonth()]}`
+  } else if (daysUntil > 1) {
+    return `Due in ${daysUntil} days`
+  } else if (daysUntil === -1) {
+    return 'Due yesterday'
+  } else {
+    return `Overdue by ${-daysUntil} days`
+  }
+}
+
 /**
  * Convert the given array into a map, using the array items' id property.
  *
