@@ -37,9 +37,10 @@ export const stringToHslColour = (str) => {
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash)
   }
+
   // Convert hash to [0–360] for hue
   const hue = Math.abs(hash) % 360
-  return `hsl(${hue}, 70%, 50%)`
+  return `hsl(${hue}, 70%, 30%)`
 }
 
 // Need a hack because getAuth().currentUser will return null if the

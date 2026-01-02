@@ -45,6 +45,26 @@ const shouldBeEnumString = (obj, propertyName, ...allowedValues) => {
   }
 }
 
+export const validateBoard = (board, allListsById) => {
+  console.log('Validating board: ', board)
+
+  shouldBeArray(board, 'listIds')
+  shouldNotContainDuplicates(board, 'listIds')
+
+  board.listIds.forEach((listId) => {
+    if (allListsById[listId] == null) {
+      fail(obj, 'listIds', `contains unknown list id '${listId}'`)
+    }
+  })
+
+  const referencedListIds = new Set(board.listIds)
+  Object.keys(allListsById).forEach((listId) => {
+    if (!referencedListIds.has(listId)) {
+      fail(board, 'listIds', `is missing list id '${listId}'`)
+    }
+  })
+}
+
 export const validateList = (list, allTasksById) => {
   console.log('Validating list: ', list)
   /*

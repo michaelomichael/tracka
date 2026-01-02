@@ -24,7 +24,8 @@ import {
 } from './utils'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
-import { validateList } from './validator'
+import { validateBoard, validateList } from './validator'
+import { version } from 'react'
 
 const { log, info, warn } = useLogger('BackendStore')
 
@@ -49,10 +50,14 @@ initializeFirestore(firebaseApp, {
 const db = getFirestore(firebaseApp)
 
 export const useBackendStore = defineStore('backendStore', () => {
-  const _data = reactive({ listsById: {}, tasksById: {} })
-  const lists = computed(() =>
-    Object.values(_data.listsById).toSorted((a, b) => (a.order > b.order ? 1 : -1)),
-  )
+  const _data = reactive({ listsById: {}, tasksById: {}, boardsById: {}, board: null })
+
+  const board = computed(() => {
+    _ensureLoaded()
+    return _data.board
+  })
+
+  const lists = computed(() => _data.board.listIds.map((listId) => _data.listsById[listId]))
   const tasks = computed(() => Object.values(_data.tasksById))
 
   const doneList = computed(() =>
@@ -76,6 +81,10 @@ export const useBackendStore = defineStore('backendStore', () => {
       isLoaded: false,
     },
     tasks: {
+      unsubscribeCallback: null,
+      isLoaded: false,
+    },
+    boards: {
       unsubscribeCallback: null,
       isLoaded: false,
     },
@@ -120,7 +129,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       _status.currentUserId = user.uid
       _status.overallStatus = 'LOADING_DOCUMENTS_FOR_USER'
 
-      for (let collectionType of ['lists', 'tasks']) {
+      for (let collectionType of ['lists', 'tasks', 'boards']) {
         const entityStatus = _status[collectionType]
 
         // avoid duplicate listeners
@@ -132,9 +141,11 @@ export const useBackendStore = defineStore('backendStore', () => {
               _handleDocChanges(snapshot, collectionType, _data[`${collectionType}ById`])
               entityStatus.isLoaded = true
 
-              if (_status.lists.isLoaded && _status.tasks.isLoaded) {
+              if (_status.lists.isLoaded && _status.tasks.isLoaded && _status.boards.isLoaded) {
                 if (_status.overallStatus === 'LOADING_DOCUMENTS_FOR_USER') {
                   _status.overallStatus = 'CHECKING_DATA_INTEGRITY'
+                  _data.board = Object.values(_data.boardsById)[0] ?? null
+                  await _createBoardIfNecessary()
                   await _createDefaultListsIfNecessary()
                   await _checkDataIntegrity()
                   _status.overallStatus = 'LOADING_COMPLETE'
@@ -149,7 +160,7 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   function _ensureLoaded() {
     if (!isLoaded) {
-      throw '[BackendStore] Attempted to access tasks or lists before data was loaded'
+      throw '[BackendStore] Attempted to access board, tasks, or lists before data was loaded'
     }
   }
 
@@ -219,6 +230,33 @@ export const useBackendStore = defineStore('backendStore', () => {
     return task?.parentTaskId == null ? null : getTask(task.parentTaskId, true)
   }
 
+  async function patchBoard(changes) {
+    _ensureLoaded()
+
+    const originalBoard = _data.board
+
+    const newBoard = {
+      ...originalBoard,
+      listIds: _newOrOld('listIds', changes, originalBoard),
+      version: originalBoard.version,
+    }
+
+    return await _saveBoard(newBoard)
+  }
+
+  async function _saveBoard(newBoard) {
+    newBoard.modifiedTimestamp = timestampNow()
+    newBoard.version = (newBoard.version ?? 0) + 1
+    validateBoard(newBoard, _data.listsById)
+
+    _data.boardsById[newBoard.id] = newBoard
+    _data.board = newBoard
+    updateDoc(doc(db, 'boards', newBoard.id), newBoard)
+
+    // Return a fresh reactive copy
+    return _data.board
+  }
+
   /**
    * Note that modifying the list's `taskIds` will not automatically
    * sync the `listId` fields of those linked tasks; you should call
@@ -236,7 +274,6 @@ export const useBackendStore = defineStore('backendStore', () => {
     const newList = {
       ...originalList,
       name: _newOrOld('name', changes, originalList),
-      order: _newOrOld('order', changes, originalList),
       taskIds: _newOrOld('taskIds', changes, originalList),
       version: originalList.version,
     }
@@ -275,7 +312,6 @@ export const useBackendStore = defineStore('backendStore', () => {
       name: list.name,
       taskIds: list.taskIds ?? [],
       specialCategory: list.specialCategory ?? null,
-      order: list.order ?? _nextListOrderValue(_data.listsById),
       ownerId: getAuth().currentUser.uid,
       createdTimestamp: now,
       modifiedTimestamp: now,
@@ -291,6 +327,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     })
 
     _data.listsById[newList.id] = newList
+
+    await patchBoard({ listIds: [..._data.board.listIds, newList.id] })
 
     // Return a fresh reactive copy
     return getList(newList.id, true)
@@ -312,6 +350,10 @@ export const useBackendStore = defineStore('backendStore', () => {
 
     deleteDoc(doc(db, 'lists', originalList.id))
     delete _data.listsById[originalList.id]
+
+    patchBoard({
+      listIds: _data.board.listIds.filter((otherListId) => otherListId !== originalList.id),
+    })
   }
 
   async function addTask(newFields) {
@@ -653,6 +695,35 @@ export const useBackendStore = defineStore('backendStore', () => {
     })
   }
 
+  async function _createBoardIfNecessary() {
+    if (Object.values(_data.boardsById).length > 0) {
+      return
+    }
+
+    info(`Creating missing default board`)
+    const now = timestampNow()
+    const newDocRef = doc(collection(db, 'boards'))
+
+    const newBoard = {
+      id: newDocRef.id,
+      listIds: [
+        // In the olden days, each list had its own `order` field
+        ...Object.values(_data.listsById)
+          .toSorted((a, b) => (a.order > b.order ? 1 : -1))
+          .map((list) => list.id),
+      ],
+      ownerId: getAuth().currentUser.uid,
+      createdTimestamp: now,
+      modifiedTimestamp: now,
+    }
+
+    await setDoc(newDocRef, newBoard)
+    _data.boardsById[newBoard.id] = newBoard
+
+    // Get a fresh reactive copy
+    _data.board = _data.boardsById[newBoard.id]
+  }
+
   async function _createDefaultListsIfNecessary() {
     const defaultListNames = ['Backlog', 'Today', 'Done']
 
@@ -664,11 +735,10 @@ export const useBackendStore = defineStore('backendStore', () => {
 
       if (matchingLists.length === 0) {
         info(`Creating missing default list '${specialCategory}'`)
-        await addList({
+        const newList = await addList({
           name: name,
           specialCategory: specialCategory,
           taskIds: [],
-          order: allLists.length + index,
         })
       } else if (matchingLists.length > 1) {
         warn(
@@ -819,8 +889,9 @@ export const useBackendStore = defineStore('backendStore', () => {
       })
     }
 
-    _checkDataIntegrity()
-    _createDefaultListsIfNecessary()
+    await _createBoardIfNecessary()
+    await _checkDataIntegrity()
+    await _createDefaultListsIfNecessary()
 
     log('restoreFromBackupJson: complete')
   }
@@ -831,6 +902,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     _checkDataIntegrity,
     init,
     isLoaded,
+    board,
     tasks,
     lists,
     doneList,
@@ -841,6 +913,7 @@ export const useBackendStore = defineStore('backendStore', () => {
     getParentAndChildTasksForTask,
     getChildTasksForTask,
     getParentTaskForTask,
+    patchBoard,
     addList,
     patchList,
     deleteList,
@@ -892,14 +965,4 @@ function _newOrOld(fieldName, newObject, oldObject) {
 
 function _validateTask(task) {
   // TODO: implement this, and use it in more places above.
-}
-
-function _nextListOrderValue(listsById) {
-  const lists = Object.values(listsById)
-
-  if (lists.length === 0) {
-    return 0
-  } else {
-    return lists.reduce((maxSoFar, list) => Math.max(maxSoFar, list.order), -1) + 1
-  }
 }

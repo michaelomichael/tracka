@@ -108,14 +108,28 @@ li.flex.bullets::before {
   z-index: 1200 !important;
 }
 
-.task-due-by-2 {
-  background-color: yellow;
+@media (prefers-color-scheme: light) {
+  .task-due-by-2 {
+    background-color: rgb(249, 249, 173);
+  }
+  .task-due-by-3 {
+    background-color: rgb(208, 161, 74);
+  }
+  .task-due-by-4 {
+    background-color: rgb(214, 102, 102);
+  }
 }
-.task-due-by-3 {
-  background-color: orange;
-}
-.task-due-by-4 {
-  background-color: red;
+
+@media (prefers-color-scheme: dark) {
+  .task-due-by-2 {
+    background-color: rgb(86, 93, 32);
+  }
+  .task-due-by-3 {
+    background-color: rgb(149, 97, 1);
+  }
+  .task-due-by-4 {
+    background-color: rgb(131, 48, 48);
+  }
 }
 
 .Vue-Toastification__toast--success a,

@@ -9,56 +9,48 @@ const { log } = useLogger()
 const backendStore = useBackendStore()
 
 const state = reactive({
-    isLoaded: false,
-    sortableListIds: [],
+  isLoaded: false,
+  sortableListIds: [],
 })
 
 watchEffect(() => {
-    if (backendStore.isLoaded) {
-        state.sortableListIds = backendStore.lists.map(list => list.id)
-        state.isLoaded = true
-    }
+  if (backendStore.isLoaded) {
+    state.sortableListIds = [...backendStore.board.listIds]
+    state.isLoaded = true
+  }
 })
 
 async function handleOrderChanged() {
-    log("New order is: ", JSON.stringify(state.sortableListIds))
-
-    state.sortableListIds.forEach(async (id, index) => {
-        const list = backendStore.getList(id)
-        if (list.order !== index) {
-            log(`  - moving list '${id}' from pos ${list.order} to ${index}`)
-            await backendStore.patchList(list, { order: index })
-        }
-    })
+  log("New order is: ", JSON.stringify(state.sortableListIds))
+  await backendStore.patchBoard({ listIds: state.sortableListIds })
 }
 
 async function handleNewList() {
-    const name = prompt("New list name?")
-    if (name == null || name === "") {
-        return
-    }
+  const name = prompt("New list name?")
+  if (name == null || name === "") {
+    return
+  }
 
-    await backendStore.addList({
-        name,
-        order: backendStore.lists.length, // order is zero-indexed
-        taskIds: [],
-    })
+  await backendStore.addList({
+    name,
+    taskIds: [],
+  })
 }
 </script>
 
 <template>
-    <section v-if="state.isLoaded">
-        <draggable class="flex gap-2 items-stretch" v-model="state.sortableListIds" itemKey="this"
-            @update="handleOrderChanged" animation="200" delay="1000" delayOnTouchOnly="true">
-            <template #item="{ element }">
-                <ListEdit :listId="element" class="min-w-40 w-40 snap-center" />
-            </template>
+  <section v-if="state.isLoaded">
+    <draggable class="flex gap-2 items-stretch" v-model="state.sortableListIds" itemKey="this"
+      @update="handleOrderChanged" animation="200" delay="1000" delayOnTouchOnly="true">
+      <template #item="{ element }">
+        <ListEdit :listId="element" class="min-w-40 w-40 snap-center" />
+      </template>
 
-            <template #footer>
-                <Button class="block rounded-xl! min-w-40 w-40" @click.prevent="handleNewList">
-                    <i class="pi pi-plus-circle"> </i> Add a new list</Button>
-            </template>
-        </draggable>
+      <template #footer>
+        <Button class="block rounded-xl! min-w-40 w-40" @click.prevent="handleNewList">
+          <i class="pi pi-plus-circle"> </i> Add a new list</Button>
+      </template>
+    </draggable>
 
-    </section>
+  </section>
 </template>

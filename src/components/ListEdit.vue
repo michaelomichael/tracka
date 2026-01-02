@@ -34,7 +34,11 @@ watchEffect(() => {
   if (backendStore.isLoaded) {
     if (state.list?.id !== props.listId) {
       state.list = backendStore.getList(props.listId)
-      state.successorList = backendStore.lists.findLast(list => list.order < state.list.order)
+
+      const thisListIndex = backendStore.board.listIds.findIndex(id => id === state.list.id)
+      const successorListIndex = thisListIndex > 0 ? thisListIndex - 1 : thisListIndex + 1
+
+      state.successorList = backendStore.getList(backendStore.board.listIds[successorListIndex]) ?? null
       state.isLoaded = true
 
       form.tasksDestinationListId = state.successorList?.id ?? null
@@ -44,11 +48,11 @@ watchEffect(() => {
 
 async function handleMoveToFarLeft() {
   try {
-    const targetOrderValue = backendStore.lists.find(list => list.specialCategory == null).order
-    log("Target order value is ", targetOrderValue)
+    const targetIndex = backendStore.lists.findIndex(list => list.specialCategory == null)
+    log("Target index is ", targetIndex)
 
-    if (state.list.order <= targetOrderValue) {
-      log(`List '${state.list.name}' is already at or before the first non-special list, so won't do anything`)
+    if (backendStore.board.listIds[targetIndex] === state.list.id) {
+      log(`List '${state.list.name}' is already at the target index ${targetIndex}, so won't do anything`)
       return
     }
 
@@ -59,13 +63,9 @@ async function handleMoveToFarLeft() {
       state.list = backendStore.getList(state.list.id, true)
     }
 
-    const lists = [...backendStore.lists.filter(list => list.order >= targetOrderValue)]
-    lists.forEach(async (list) => {
-      const changes = (list.id === state.list.id) ?
-        { order: targetOrderValue } :
-        { order: list.order + 1 }
-
-      await backendStore.patchList(list, changes)
+    await backendStore.patchBoard({
+      listIds: backendStore.board.listIds
+        .filter(id => id !== state.list.id).toSpliced(targetIndex, 0, state.list.id)
     })
 
     toast.success(`Moved list "${state.list.name}".`)

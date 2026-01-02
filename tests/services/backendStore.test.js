@@ -11,6 +11,9 @@ import {
   deleteDoc,
   query,
   where,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
 } from 'firebase/firestore'
 import { useBackendStore } from '../../src/services/backendStore'
 import { getAuth } from 'firebase/auth'
@@ -30,6 +33,9 @@ vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
   updateDoc: vi.fn(),
   getFirestore: vi.fn(),
+  initializeFirestore: vi.fn(),
+  persistentLocalCache: vi.fn(),
+  persistentMultipleTabManager: vi.fn(),
 }))
 
 vi.mock('firebase/auth', () => ({
@@ -66,6 +72,11 @@ beforeEach(() => {
   underTest = useBackendStore()
   underTest._data.listsById = {}
   underTest._data.tasksById = {}
+  underTest._data.boardsById = {}
+  underTest._data.board = {
+    id: 'board-1',
+    listIds: [],
+  }
 })
 
 const givenThatTaskExistsWith = (taskProperties) => {
@@ -92,7 +103,6 @@ const givenThatListExistsWith = (listProperties) => {
   underTest._data.listsById[id] = {
     id,
     name: `Random ${id}`,
-    order: Math.floor(Math.random() * 1000000000),
     taskIds: [],
     specialCategory: null,
     ownerId: defaults.userId,
@@ -100,6 +110,10 @@ const givenThatListExistsWith = (listProperties) => {
     modifiedTimestamp: defaults.timestamp,
     ...listProperties,
   }
+
+  underTest._data.board.listIds.push(id)
+
+  return id
 }
 
 describe('addList', () => {
@@ -119,7 +133,6 @@ describe('addList', () => {
       id: defaults.newDocId,
       name: 'Test list',
       taskIds: [],
-      order: 0,
       ownerId: defaults.userId,
       specialCategory: null,
       createdTimestamp: defaults.timestamp,
@@ -132,7 +145,6 @@ describe('addList', () => {
     const result = await underTest.addList({
       name: 'Test list',
       taskIds: ['1'],
-      order: 99,
       specialCategory: 'DONE',
       createdTimestamp: 'fake-timestamp',
       modifiedTimestamp: 'fake-timestamp',
@@ -142,7 +154,6 @@ describe('addList', () => {
       id: defaults.newDocId,
       name: 'Test list',
       taskIds: ['1'],
-      order: 99,
       ownerId: defaults.userId,
       specialCategory: 'DONE',
       createdTimestamp: defaults.timestamp,
@@ -159,7 +170,6 @@ describe('addList', () => {
       id: defaults.newDocId,
       name: 'Test list',
       taskIds: [],
-      order: 0,
       ownerId: defaults.userId,
       specialCategory: null,
       createdTimestamp: defaults.timestamp,
@@ -167,12 +177,12 @@ describe('addList', () => {
     })
   })
 
-  it('chooses correct value for order', async () => {
-    givenThatListExistsWith({ order: 7 })
-    givenThatListExistsWith({ order: 2 })
+  it('adds new list to the board', async () => {
+    const listId1 = givenThatListExistsWith({})
+    const listId2 = givenThatListExistsWith({})
 
     const result = await underTest.addList({ name: 'Test list 3' })
 
-    expect(result?.order).toBe(8)
+    expect(underTest._data.board.listIds).toMatchObject([listId1, listId2, result.id])
   })
 })
