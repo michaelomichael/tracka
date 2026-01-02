@@ -84,7 +84,7 @@ function handleModalClose(eventName, other) {
       @closing="handleModalClose()" @before-close="handleModalClose()" @closed="handleModalClose()"
       @update:modelValue="(x) => handleModalClose('update: modelValue', x)"
       modalClass="dark:!bg-gray-900 dark:!border-gray-500 border-2" bgClass="!bg-black opacity-80">
-      <TaskEdit v-if="state.editingTaskId != null" :taskId="state.editingTaskId" :listId="state.newTaskListId" />
+      <TaskEdit v-if="state.showTaskEditor != null" :taskId="state.editingTaskId" :listId="state.newTaskListId" />
     </Modal>
 
     <Modal v-model="state.showListEditor" :title="`List: ${state.editingList?.name ?? ''}`"
