@@ -50,11 +50,14 @@ watchEffect(async () => {
       (state.childTasks.filter(childTask => backendStore.getListForTask(childTask)?.name?.toLowerCase() === "waiting").length /
         state.childTasks.length)
 
-    state.taskPanicIndex = taskDueByPanicIndex(state.task)
+    state.taskPanicIndex = state.task.isDone ? 0 : taskDueByPanicIndex(state.task)
 
     state.isOverdue = state.taskPanicIndex === 4
-    state.dueDateDescription = taskDueByDescription(state.task.dueByTimestamp)
+    state.dueDateDescription = taskDueByDescription(state.task)
 
+    if (state.task.dueByTimestamp != null) {
+      log("Due date desc is", state.dueDateDescription, state.taskPanicIndex, state.task)
+    }
     state.isLoaded = true
   }
 })

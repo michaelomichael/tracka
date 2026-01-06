@@ -211,11 +211,11 @@ const todaysDate = () => timestampNow().substring(0, 10)
       </div>
 
       <div id="list-selection" class="flex gap-2 mb-4 items-stretch">
-        <div :class="`rounded-md border-1 p-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
+        <label :class="`rounded-md border-1 p-2 border-gray-800 flex gap-1 ${form.isDone ? 'bg-green-500' : ''}`">
           <input type="checkbox" id="done" v-model="form.isDone" @change="handleChange"
             v-bind:autofocus="!state.isNew" />
-          <label for="done">Done?</label>
-        </div>
+          <span class="pl-1">Done?</span>
+        </label>
 
         <select v-if="!form.isDone" v-model="form.listId" id="listId" name="listId" @change="handleChange"
           class="border rounded w-full p-2" required>
