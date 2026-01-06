@@ -25,7 +25,6 @@ import {
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
 import { validateBoard, validateList } from './validator'
-import { version } from 'react'
 
 const { log, info, warn } = useLogger('BackendStore')
 
