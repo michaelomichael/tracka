@@ -91,11 +91,10 @@ export function numDaysUntil(targetDate, optionalReferenceDate) {
   return Math.floor((targetUnixTimeAtMidnight - referenceUnixTimeAtMidnight) / NUM_MILLIS_PER_DAY)
 }
 
-export function toDueDateDescription(dueByTimestamp) {
-  if (dueByTimestamp == null) {
+export function taskDueByDescription(task) {
+  if (task?.dueByTimestamp == null) {
     return null
   }
-
   const dueDate = new Date(Date.parse(dueByTimestamp))
   const daysUntil = numDaysUntil(dueDate)
   const months = [
@@ -181,6 +180,7 @@ export function taskDueByPanicIndex(task) {
     return 0
   }
 
+  console.log('[taskDueByPanicIndex] Task is', task)
   const numDays = numDaysUntil(task.dueByTimestamp)
 
   if (numDays > 14) {

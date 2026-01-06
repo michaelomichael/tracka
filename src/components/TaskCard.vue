@@ -2,7 +2,7 @@
 import { useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import ProgressBar from './widgets/ProgressBar.vue';
-import { numDaysUntil, stringToHslColour, taskDueByPanicIndex, toDueDateDescription } from '../services/utils';
+import { stringToHslColour, taskDueByPanicIndex, taskDueByDescription } from '../services/utils';
 import { useLogger } from "../services/logger";
 
 const backendStore = useBackendStore();
@@ -20,6 +20,8 @@ const state = reactive({
   task: {},
   parentTask: {},
   childTasks: [],
+  numCompletedChildTasks: 0,
+  incompleteChildTasks: [],
   progress: -1,
   progress2: -1,
   taskPanicIndex: 0,
@@ -36,10 +38,12 @@ watchEffect(async () => {
       return;
     }
     state.parentTask = backendStore.getParentTaskForTask(state.task)
-    state.childTasks = backendStore.getChildTasksForTask(state.task)
+    state.childTasks = backendStore.getChildTasksForTask(state.task).toSorted((a, b) => a.isDone && !b.isDone ? -1 : (b.isDone && !a.isDone ? 1 : 0))
+    state.numCompletedChildTasks = state.childTasks.filter(childTask => childTask.isDone).length
+    state.incompleteChildTasks = state.childTasks.filter(childTask => !childTask.isDone)
 
     state.progress =
-      state.childTasks.filter(childTask => childTask.isDone).length /
+      state.numCompletedChildTasks /
       state.childTasks.length
 
     state.progress2 = state.progress +
@@ -49,11 +53,21 @@ watchEffect(async () => {
     state.taskPanicIndex = taskDueByPanicIndex(state.task)
 
     state.isOverdue = state.taskPanicIndex === 4
-    state.dueDateDescription = toDueDateDescription(state.task.dueByTimestamp)
+    state.dueDateDescription = taskDueByDescription(state.task.dueByTimestamp)
 
     state.isLoaded = true
   }
 })
+
+function getListDescriptionForChildTask(childTask) {
+  const list = backendStore.getListForTask(childTask)
+
+  if (list?.specialCategory === "DONE") {
+    return "✅"
+  }
+
+  return `⟪${list.name ?? "???"}⟫`
+}
 </script>
 
 <template>
@@ -82,12 +96,16 @@ watchEffect(async () => {
 
     <div v-if="state.childTasks.length > 0" class="text-xs">
       <ProgressBar class="mt-2" :progress="state.progress" :progress2="state.progress2" />
-      <ul class="m-2 px-2">
-        <li v-for="childTask in state.childTasks" :key="childTask.id" class="list-disc">
-          <!-- TODO: Add an icon beside each one if it's done -->
+
+      <p v-if="state.numCompletedChildTasks > 0 && state.incompleteChildTasks.length > 0" class="mt-2">
+        {{ state.numCompletedChildTasks }} completed, plus:
+      </p>
+
+      <ul v-if="state.incompleteChildTasks.length > 0" class="m-2 px-2">
+        <li v-for="childTask in state.incompleteChildTasks" :key="childTask.id" class="list-disc">
           <span>
             <!-- <RouterLink :to="`/tasks/${childTask.id}/edit`"> -->
-            ⟪{{ backendStore.getListForTask(childTask)?.name }}⟫ {{ childTask.title }}
+            {{ getListDescriptionForChildTask(childTask) }} {{ childTask.title }}
             <!-- </RouterLink> -->
           </span>
         </li>
