@@ -88,7 +88,7 @@ export const validateList = (list, allTasksById) => {
 
   list.taskIds.forEach((taskId) => {
     if (allTasksById[taskId] == null) {
-      fail(obj, 'taskIds', `contains unknown task id '${taskId}'`)
+      fail(list, 'taskIds', `contains unknown task id '${taskId}'`)
     }
   })
 }

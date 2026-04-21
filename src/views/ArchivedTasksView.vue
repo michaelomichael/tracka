@@ -8,52 +8,52 @@ const { log } = useLogger()
 const backendStore = useBackendStore()
 
 const state = reactive({
-    isLoaded: false,
-    archivedTasks: [],
+  isLoaded: false,
+  archivedTasks: [],
 })
 
 watchEffect(async () => {
+  log("Backend store has loaded, so will grab archived tasks now")
+  if (backendStore.isLoaded) {
     log("Backend store has loaded, so will grab archived tasks now")
-    if (backendStore.isLoaded) {
-        log("Backend store has loaded, so will grab archived tasks now")
-        state.archivedTasks = await backendStore.getArchivedTasks()
-        log(`Got ${state.archivedTasks.length} archived tasks`)
-        state.isLoaded = true
-    }
+    state.archivedTasks = await backendStore.getArchivedTasks(30)
+    log(`Got ${state.archivedTasks.length} archived tasks`)
+    state.isLoaded = true
+  }
 })
 </script>
 
 <template>
-    <main>
-        <h1>Archived Tasks</h1>
-        <section v-if="state.isLoaded">
-            <table class="border-collapse border-amber-700">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Date archived</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="task in state.archivedTasks">
-                        <td>{{ task.id }}</td>
-                        <td>{{ task.title }}</td>
-                        <td class="font-mono">{{ task.archivedTimestamp }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+  <main>
+    <h1>Archived Tasks</h1>
+    <section v-if="state.isLoaded">
+      <table class="border-collapse border-amber-700">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Date archived</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="task in state.archivedTasks">
+            <td>{{ task.id }}</td>
+            <td>{{ task.title }}</td>
+            <td class="font-mono">{{ task.archivedTimestamp }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
-        <Loading v-else />
-    </main>
+    <Loading v-else />
+  </main>
 </template>
 
 <style scoped>
 th,
 td {
-    padding: 0.4rem;
-    border: 1px solid gray;
-    text-align: left;
+  padding: 0.4rem;
+  border: 1px solid gray;
+  text-align: left;
 }
 </style>

@@ -12,6 +12,8 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  orderBy,
+  limit,
 } from 'firebase/firestore'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
@@ -607,61 +609,53 @@ export const useBackendStore = defineStore('backendStore', () => {
     )
   }
 
+  /**
+   * Moves archivable tasks to the separate 'archived_tasks' collection in the DB.
+   * A task is considered archivable only if:
+   *  - It's marked as 'done'
+   *  - It's parent (if any) is also 'archivable'.
+   *  - All of its children (if any) are also 'archivable'.
+   *
+   * @returns The number of tasks that were archived.
+   */
   async function archiveDoneTasks() {
-    /*
-        Only mark a task as archivable if:
-            - It's done
-            - doneTimestamp is a while ago (TODO)
-            - Its parent task (if any, and _its_ parent task, and so on) is also archivable
-            - All of its child tasks (if any) are also archivable
-    */
-    const nonArchivableTaskIds = new Set(
-      this.tasks.filter((task) => task.isDone !== true).map((task) => task.id),
-    )
-    let candidateTasks = this.tasks.filter((task) => task.isDone === true)
+    const removeNonArchivableTasksFrom = (originalMap) => {
+      const newMap = new Map()
+      originalMap.forEach((task) => {
+        const isDone = task.isDone
+        const parentIsArchivable = task.parentTaskId == null || originalMap.has(task.parentTaskId)
+        const childrenAreArchivable =
+          task.childTaskIds?.find((childTaskId) => !originalMap.has(childTaskId)) == null
 
-    const recordNonArchivableAncestors = (task) => {
-      if (nonArchivableTaskIds.has(task.id)) {
-        return true
-      }
-      const parentTask = getParentTaskForTask(task)
-      if (parentTask != null && recordNonArchivableAncestors(parentTask)) {
-        nonArchivableTaskIds.add(task.id)
-        return true
-      }
-      return false
+        if (isDone && parentIsArchivable && childrenAreArchivable) {
+          newMap.set(task.id, task)
+        }
+      })
+      return newMap
     }
 
-    const recordNonArchivableDescendants = (task) => {
-      if (nonArchivableTaskIds.has(task.id)) {
-        return true
+    let candidatesMap = new Map()
+    Object.values(this._data.tasksById).forEach((task) => candidatesMap.set(task.id, task))
+
+    while (true) {
+      const remainingCandidatesMap = removeNonArchivableTasksFrom(candidatesMap)
+      log(
+        `We had ${candidatesMap.size} original candidates, and now we have ${remainingCandidatesMap.size} remaining candidates.`,
+      )
+
+      const isFinished =
+        remainingCandidatesMap.size === candidatesMap.size || remainingCandidatesMap.size === 0
+      candidatesMap = remainingCandidatesMap
+
+      if (isFinished) {
+        break
       }
-      const childTasks = getChildTasksForTask(task)
-      if (childTasks.filter((childTask) => recordNonArchivableDescendants(childTask)).length > 0) {
-        nonArchivableTaskIds.add(task.id)
-        return true
-      }
-      return false
     }
 
-    // Check for non-archivable parents first
-    candidateTasks.forEach((task) => {
-      recordNonArchivableAncestors(task)
-    })
+    log('Final candidates list is:', candidatesMap)
 
-    // Now check for non-archivable children
-    candidateTasks.forEach((task) => {
-      recordNonArchivableDescendants(task)
-    })
-
-    // Finally, see what we're left with
-    candidateTasks = candidateTasks.filter((task) => !nonArchivableTaskIds.has(task.id))
-
-    candidateTasks.forEach(async (task) => {
-      log(`We might actually be able to archive task '${task.title}' (id ${task.id})`)
-      // TODO: Delete the doc and re-create it in the archived_tasks collection with:
-      //     - listId: null
-      //    Then remove it from its current list
+    candidatesMap.forEach(async (task) => {
+      log(`   - '${task.title}' (id ${task.id})`)
 
       setDoc(doc(db, 'archived_tasks', task.id), {
         ...task,
@@ -670,18 +664,29 @@ export const useBackendStore = defineStore('backendStore', () => {
 
       task.parentTask = null
       task.childTaskIds = []
+    })
+
+    candidatesMap.forEach(async (task) => {
+      // TODO: There should be a more efficient way of doing bulk deletes, that doesn't involve updating
+      // the tasks' list with every iteration.
+      log(`Deleting task '${task.title}' (id ${task.id})`)
       await deleteTask(task)
     })
 
-    return candidateTasks.length
+    return candidatesMap.size
   }
 
-  function getArchivedTasks() {
+  function getArchivedTasks(pageSize) {
     return new Promise(async (resolve) => {
       const user = await getCurrentUserOnceFirebaseHasLoaded()
       log('User is ', user)
       const removeListener = onSnapshot(
-        query(collection(db, 'archived_tasks'), where('ownerId', '==', user.uid)),
+        query(
+          collection(db, 'archived_tasks'),
+          where('ownerId', '==', user.uid),
+          orderBy('doneTimestamp', 'desc'),
+          limit(pageSize ?? 100),
+        ),
         async (snapshot) => {
           log('Archived snapshot received')
           const archivedTasks = snapshot.docs.map((doc) => {
