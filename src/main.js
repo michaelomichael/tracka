@@ -23,7 +23,7 @@ app.use(Toast, {
   shareAppContext: true, // Enables it to find 'router' when passing custom Components as the toast text
   toastDefaults: {
     [TYPE.ERROR]: {
-      timeout: 10000,
+      timeout: 5000,
       closeButton: 'button',
       hideProgressBar: true,
       position: 'bottom-right',
@@ -35,7 +35,7 @@ app.use(Toast, {
       position: 'bottom-right',
     },
     [TYPE.SUCCESS]: {
-      timeout: 30000,
+      timeout: 4000,
       hideProgressBar: true,
       position: 'bottom-right',
     },
