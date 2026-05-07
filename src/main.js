@@ -54,7 +54,7 @@ app.config.errorHandler = (err, instance, info) => {
     toast.error(`Error: ${err}\nSee console for more details`)
   } catch (e) {
     console.error('...and I failed to show an error toast', e)
-    alert('Error occurred. See the console for more details.')
+    alert('Error occurred and toast failed to display. See the console for more details.')
   }
 }
 

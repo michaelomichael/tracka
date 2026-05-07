@@ -15,6 +15,7 @@ import Error404View from '../views/Error404View.vue'
 
 const toast = useToast()
 
+// TODO: Why is this in the router and not main.js?
 if (Capacitor.isNativePlatform()) {
   await StatusBar.setOverlaysWebView({ overlay: false })
   StatusBar.setBackgroundColor({ color: '#000000' })
