@@ -5,6 +5,9 @@
   "plugins": {
     "StatusBar": {
       "overlaysWebView": false
+    },
+    "server": {
+      "androidScheme": "https"
     }
   }
 }

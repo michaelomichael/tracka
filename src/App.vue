@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useBackendStore } from './services/backendStore';
 import { onMounted } from 'vue';
@@ -33,38 +33,27 @@ onMounted(async () => {
     }
   })
 
-  // TODO: Go back and figure out which of these should be kept
-  // document.addEventListener('androidIntent', (event) => {
-  //     const path = event.targetWebViewPath
-  //     log("### document received 'androidIntent' event with path", path, event)
+  function handleOpenUrl(url) {
+    if (url.includes("/link/quickTask")) {
+      log("Routing to /quickTask")
+      router.push("/quickTask")
+    } else if (url.includes("/link/board")) {
+      log("Routing to /")
+      router.push("/")
+    }
+  }
 
-  //     if (path != null) {
-  //         router.push(path)
-  //     }
-  // })
+  CapacitorApp.addListener("appUrlOpen", (event) => {
+    log("In CapacitorApp.addListener(), event is ", event)
+    handleOpenUrl(event.url)
+  })
 
-  // CapacitorApp.addListener('appUrlOpen', (event) => {
-  //     const url = event.url
-
-  //     log('In CapacitorApp.addListener(), event is ', event)
-  //     if (url.includes('/link/quickTask')) {
-  //         log('Routing event')
-  //         router.push('/quickTask')
-  //     }
-  // })
-
-  // CapacitorApp.getLaunchUrl().then((result) => {
-  //     log("In getLaunchUrl callback, result is", result)
-  //     if (!result || !result.url) {
-  //         return
-  //     }
-
-  //     const url = result.url;
-  //     if (url.includes('/link/quickTask')) {
-  //         log("Routing to /quickTask")
-  //         router.push('/quickTask')
-  //     }
-  // });
+  CapacitorApp.getLaunchUrl().then((result) => {
+    log("In getLaunchUrl callback, result is", result)
+    if (result?.url) {
+      handleOpenUrl(result.url)
+    }
+  });
 });
 
 </script>
