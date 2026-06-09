@@ -35,6 +35,7 @@ watchEffect(async () => {
 
     if (state.task == null) {
       warn(`In watchEffect(), task for id '${props.taskId}' is null`);
+      state.isLoaded = false
       return;
     }
     state.parentTask = backendStore.getParentTaskForTask(state.task)

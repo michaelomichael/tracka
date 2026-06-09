@@ -1,3 +1,9 @@
+import {
+  SPECIAL_CATEGORY_BACKLOG,
+  SPECIAL_CATEGORY_DONE,
+  SPECIAL_CATEGORY_TODAY,
+} from './backendStore'
+
 const fail = (obj, propertyName, message) => {
   throw `Validation error: property '${propertyName}' ${message} for object <${obj}>`
 }
@@ -83,7 +89,13 @@ export const validateList = (list, allTasksById) => {
   shouldNotContainDuplicates(list, 'taskIds')
 
   if (list.specialCategory != null) {
-    shouldBeEnumString(list, 'specialCategory', 'DONE', 'TODAY', 'BACKLOG')
+    shouldBeEnumString(
+      list,
+      'specialCategory',
+      SPECIAL_CATEGORY_DONE,
+      SPECIAL_CATEGORY_TODAY,
+      SPECIAL_CATEGORY_BACKLOG,
+    )
   }
 
   list.taskIds.forEach((taskId) => {

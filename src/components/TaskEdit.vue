@@ -6,10 +6,11 @@ import { useBackendStore } from "../services/backendStore";
 import { copy, timestampNow } from "../services/utils";
 import TaskPickerCombo from "./TaskPickerCombo.vue";
 import { useLogger } from "../services/logger";
+import SmartForm from "./widgets/SmartForm.vue";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
-const toast = useToast();
+const toast = useToast()
 const router = useRouter()
 
 const props = defineProps({
@@ -200,7 +201,7 @@ const todaysDate = () => timestampNow().substring(0, 10)
 
 <template>
   <section class="max-w-full m-auto">
-    <form v-if="state.isLoaded" @submit.prevent="handleSubmit()">
+    <SmartForm v-if="state.isLoaded" @submit="handleSubmit()">
       <div id="buttons" v-if="state.isNew" class="flex gap-2 items-baseline mb-4">
         <Button
           class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
@@ -294,6 +295,6 @@ const todaysDate = () => timestampNow().substring(0, 10)
         <DatePicker v-if="form.isDueByEnabled" ref="datePickerRef" v-model="form.dueByDate" fluid date-format="yy-mm-dd"
           updateModelType="string" @value-change="handleDateChange" />
       </div>
-    </form>
+    </SmartForm>
   </section>
 </template>

@@ -2,10 +2,11 @@
 import { reactive, watchEffect } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
-import { useBackendStore } from "../services/backendStore";
+import { useBackendStore, SPECIAL_CATEGORY_DONE } from "../services/backendStore";
 import { useLogger } from "../services/logger";
 import Loading from "./widgets/Loading.vue";
 import { Fieldset } from "primevue";
+import SmartForm from "./widgets/SmartForm.vue";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
@@ -23,6 +24,8 @@ const state = reactive({
   list: null,
   successorList: null,
   isLoaded: false,
+  supportsMovingList: false,
+  supportsMovingTasks: false,
 })
 
 const form = reactive({
@@ -40,6 +43,9 @@ watchEffect(() => {
 
       state.successorList = backendStore.getList(backendStore.board.listIds[successorListIndex]) ?? null
       state.isLoaded = true
+
+      state.supportsMovingList = state.list.specialCategory == null
+      state.supportsMovingTasks = state.list.specialCategory != SPECIAL_CATEGORY_DONE
 
       form.tasksDestinationListId = state.successorList?.id ?? null
     }
@@ -95,8 +101,8 @@ async function handleMoveTasks() {
   <section class="max-w-full m-auto">
     <div v-if="state.isLoaded" class="flex flex-col gap-4">
 
-      <Fieldset legend="Move List">
-        <form class="flex flex-col gap-4 items-baseline" @submit.prevent="handleMoveToFarLeft">
+      <Fieldset legend="Move List" v-if="state.supportsMovingList">
+        <SmartForm class="flex flex-col gap-4 items-baseline" @submit="handleMoveToFarLeft">
           <div v-if="state.successorList != null && state.list.taskIds.length > 0">
             <label class=" mr-2" for="moveTasksToSuccessor">
               <input type="checkbox" id="moveTasksToSuccessor" v-model="form.moveTasksToSuccessor" />
@@ -110,12 +116,13 @@ async function handleMoveTasks() {
             Move to after Backlog
           </Button>
 
-        </form>
+        </SmartForm>
       </Fieldset>
 
 
-      <Fieldset legend="Move Tasks" v-if="state.list.taskIds.length > 0">
-        <form class="flex flex-col gap-4 items-baseline" @submit.prevent="handleMoveTasks">
+      <Fieldset legend="Move Tasks" v-if="state.supportsMovingTasks">
+        <SmartForm v-if="state.list.taskIds.length > 0" class="flex flex-col gap-4 items-baseline"
+          @submit="handleMoveTasks">
           <div class="flex items-baseline gap-4">
             <div>
               <label for="tasksDestinationListId">
@@ -137,7 +144,10 @@ async function handleMoveTasks() {
             Move Tasks
           </Button>
 
-        </form>
+        </SmartForm>
+        <p v-else>
+          No tasks to move
+        </p>
       </Fieldset>
       <!--
         <div class="flex gap-2 mb-4 items-stretch">

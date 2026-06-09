@@ -15,7 +15,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore'
-import { useBackendStore } from '../../src/services/backendStore'
+import { SPECIAL_CATEGORY_DONE, useBackendStore } from '../../src/services/backendStore'
 import { getAuth } from 'firebase/auth'
 import { timestampNow } from '../../src/services/utils'
 
@@ -145,7 +145,7 @@ describe('addList', () => {
     const result = await underTest.addList({
       name: 'Test list',
       taskIds: ['1'],
-      specialCategory: 'DONE',
+      specialCategory: SPECIAL_CATEGORY_DONE,
       createdTimestamp: 'fake-timestamp',
       modifiedTimestamp: 'fake-timestamp',
     })
@@ -155,7 +155,7 @@ describe('addList', () => {
       name: 'Test list',
       taskIds: ['1'],
       ownerId: defaults.userId,
-      specialCategory: 'DONE',
+      specialCategory: SPECIAL_CATEGORY_DONE,
       createdTimestamp: defaults.timestamp,
       modifiedTimestamp: defaults.timestamp,
     })

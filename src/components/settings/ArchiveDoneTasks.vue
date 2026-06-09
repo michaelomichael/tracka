@@ -3,8 +3,11 @@ import { reactive, watchEffect } from 'vue';
 import { useBackendStore } from '../../services/backendStore';
 import Loading from '../widgets/Loading.vue';
 import { useLogger } from "../../services/logger";
+import SmartForm from "../widgets/SmartForm.vue";
+import { useToast } from "vue-toastification";
 
 const { log } = useLogger()
+const toast = useToast();
 
 const backendStore = useBackendStore()
 
@@ -20,15 +23,16 @@ watchEffect(() => {
 
 async function archiveOldTasks() {
   log("About to archive old tasks...")
-  await backendStore.archiveDoneTasks()
+  const numTasksArchived = await backendStore.archiveDoneTasks()
+  toast.success(`Archived ${numTasksArchived} task${numTasksArchived === 1 ? "" : "s"}`);
 }
 </script>
 
 <template>
   <div>
-    <div v-if="state.isLoaded">
-      <Button @click.prevent="archiveOldTasks"> Archive Old Tasks </Button>
-    </div>
+    <SmartForm v-if="state.isLoaded" @submit="archiveOldTasks">
+      <Button type="submit"> Archive Old Tasks </Button>
+    </SmartForm>
     <Loading v-else />
   </div>
 </template>

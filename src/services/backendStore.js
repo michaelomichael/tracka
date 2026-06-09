@@ -28,6 +28,10 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { useLogger } from './logger'
 import { validateBoard, validateList } from './validator'
 
+export const SPECIAL_CATEGORY_DONE = 'DONE'
+export const SPECIAL_CATEGORY_TODAY = 'TODAY'
+export const SPECIAL_CATEGORY_BACKLOG = 'BACKLOG'
+
 const { log, info, warn } = useLogger('BackendStore')
 
 log(`App ID env var is '${import.meta.env['VITE_FIREBASE_PROJECT_ID']}'`)
@@ -62,15 +66,23 @@ export const useBackendStore = defineStore('backendStore', () => {
   const tasks = computed(() => Object.values(_data.tasksById))
 
   const doneList = computed(() =>
-    single(Object.values(_data.listsById), (list) => list.specialCategory === 'DONE', {
-      failOnMultipleMatches: false,
-    }),
+    single(
+      Object.values(_data.listsById),
+      (list) => list.specialCategory === SPECIAL_CATEGORY_DONE,
+      {
+        failOnMultipleMatches: false,
+      },
+    ),
   )
 
   const newItemsList = computed(() =>
-    single(Object.values(_data.listsById), (list) => list.specialCategory === 'TODAY', {
-      failOnMultipleMatches: false,
-    }),
+    single(
+      Object.values(_data.listsById),
+      (list) => list.specialCategory === SPECIAL_CATEGORY_TODAY,
+      {
+        failOnMultipleMatches: false,
+      },
+    ),
   )
 
   const _status = reactive({
@@ -586,7 +598,7 @@ export const useBackendStore = defineStore('backendStore', () => {
       const task = getTask(taskId, true)
 
       task.listId = targetList.id
-      task.isDone = targetList.specialCategory === 'DONE'
+      task.isDone = targetList.specialCategory === SPECIAL_CATEGORY_DONE
       await _saveTask(task)
     })
 
@@ -730,9 +742,14 @@ export const useBackendStore = defineStore('backendStore', () => {
 
   async function _createDefaultListsIfNecessary() {
     const defaultListNames = ['Backlog', 'Today', 'Done']
+    const defaultListSpecialCategories = [
+      SPECIAL_CATEGORY_BACKLOG,
+      SPECIAL_CATEGORY_TODAY,
+      SPECIAL_CATEGORY_DONE,
+    ]
 
     defaultListNames.forEach(async (name, index) => {
-      const specialCategory = name.toUpperCase()
+      const specialCategory = defaultListSpecialCategories[index]
       const allLists = Object.values(_data.listsById)
 
       const matchingLists = allLists.filter((list) => list.specialCategory === specialCategory)

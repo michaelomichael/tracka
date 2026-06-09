@@ -1,7 +1,7 @@
 <script setup>
 import draggable from "vuedraggable";
 import TaskCard from './TaskCard.vue';
-import { useBackendStore } from '../services/backendStore';
+import { SPECIAL_CATEGORY_DONE, useBackendStore } from '../services/backendStore';
 import { reactive, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLogger } from "../services/logger";
@@ -144,7 +144,7 @@ async function archiveDoneTasks() {
     class="tracka-list rounded-xl w-70 min-w-55 xmax-h-screen xmax-h-40 xoverflow-y-hidden  p-4 m-3 krelative bg-gray-400 dark:bg-gray-700 snap-center">
     <div class="relative">
       <h2 class="text-xl font-semibold text-white text-center bg-gray-400 dark:bg-gray-700">
-        <RouterLink v-if="state.list.specialCategory == null" :to="`/lists/${state.list.id}/edit`">
+        <RouterLink v-if="state.list.specialCategory != SPECIAL_CATEGORY_DONE" :to="`/lists/${state.list.id}/edit`">
           {{ state.list.name }}
         </RouterLink>
         <span v-else>{{ state.list.name }}</span>
@@ -152,7 +152,7 @@ async function archiveDoneTasks() {
 
       <div class="absolute right-0 top-0 flex gap-1">
         <!-- "Archive Done Tasks" button: -->
-        <button v-if="state.list.specialCategory === 'DONE'" @click.prevent="archiveDoneTasks"
+        <button v-if="state.list.specialCategory === SPECIAL_CATEGORY_DONE" @click.prevent="archiveDoneTasks"
           title="Archive Old 'DONE' Tasks"
           class="border-gray-500 border-1 cursor-pointer bg-gray-200 dark:bg-gray-700 hover:bg-blue-400 fully-centered-children p-1.5 rounded-md">
           <i class="pi pi-box"></i>

@@ -35,7 +35,7 @@ app.use(Toast, {
       position: 'bottom-right',
     },
     [TYPE.SUCCESS]: {
-      timeout: 4000,
+      timeout: 3000,
       hideProgressBar: true,
       position: 'bottom-right',
     },
