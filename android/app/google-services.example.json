@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "665340889166",
+    "project_number": "TBC",
     "project_id": "tracka-2",
     "storage_bucket": "tracka-2.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:665340889166:android:9bedd73e1ba43af0d5db1f",
+        "mobilesdk_app_id": "TBC",
         "android_client_info": {
           "package_name": "dev.michaelomichael.tracka"
         }
       },
       "oauth_client": [
         {
-          "client_id": "665340889166-lctj6q5j4ogvqrusaanr2iv9j62vkgkl.apps.googleusercontent.com",
+          "client_id": "TBC",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAxk5kENCVESKbEh-6auH0DOswtwJIfLpQ"
+          "current_key": "TBC"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "665340889166-lctj6q5j4ogvqrusaanr2iv9j62vkgkl.apps.googleusercontent.com",
+              "client_id": "TBC",
               "client_type": 3
             }
           ]
