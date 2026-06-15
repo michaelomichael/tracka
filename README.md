@@ -8,7 +8,7 @@ npm install
 
 Create a `.env.local` file:
 
-```
+```shell
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
@@ -48,23 +48,25 @@ npm run build && npx cap sync
     - App nickname: `tracka-webapp`
     - Also setup Firebase Hosting for this app: [x]
     - Copy the config settings it shows:
-      ```
+
+```json
         apiKey: "TBC",
         authDomain: "tracka.firebaseapp.com",
         projectId: "tracka",
         storageBucket: "tracka.firebasestorage.app",
         messagingSenderId: "TBC",
         appId: "TBC"
-      ```
-  - Add an "android" app:
-    - Android package name: `dev.michaelomichael.tracka`
-    - App nickname: `tracka-android-app`
-    - Don't bother about downloading the json at this point.
-    - Don't bother about the "Add Firebase SDK" stuff either.
-  - Configure the "android" app:
-    - Add fingerprints to the "android" app:
-      - Grab any of the SHA-1 fingerprints from the signingReport above. (They're all the same.)
-      - Add one for SHA-256 too.
+```
+
+- Add an "android" app:
+  - Android package name: `dev.michaelomichael.tracka`
+  - App nickname: `tracka-android-app`
+  - Don't bother about downloading the json at this point.
+  - Don't bother about the "Add Firebase SDK" stuff either.
+- Configure the "android" app:
+  - Add fingerprints to the "android" app:
+    - Grab any of the SHA-1 fingerprints from the signingReport above. (They're all the same.)
+    - Add one for SHA-256 too.
 - Go to the [Firebase Console > Security > Authentication](https://console.firebase.google.com/project/tracka/authentication/providers) page:
   - Go to Sign-in method -> Google:
     - Enabled: [√]
@@ -108,7 +110,7 @@ N.B. If you make any changes to the app, I believe you need to do the `npm run b
 
 ### Try It
 
-Try it with the webapp on the phone:
+#### Try webapp on phone
 
 ```sh
 npm run dev
@@ -122,3 +124,15 @@ Note: if your local IP address has changed then you'll need to go back in to [Fi
 On phone, go to http://192.168.0.29:5173/ and try the same login sequence.
 
 To troubleshoot the web browser on the phone, can go to here on the computer: [chrome://inspect/#devices](chrome://inspect/#devices).
+
+#### Try android app on phone
+
+```shell
+npm run build &&  npx cap run android --target-name "samsung SM-A326B" --live-reload --port 5173
+```
+
+### Deploy to phone
+
+```shell
+npm run build &&  npx cap run android --target-name "samsung SM-A326B"
+```
