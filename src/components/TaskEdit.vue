@@ -7,6 +7,7 @@ import { copy, timestampNow } from "../services/utils";
 import TaskPickerCombo from "./TaskPickerCombo.vue";
 import { useLogger } from "../services/logger";
 import SmartForm from "./widgets/SmartForm.vue";
+import InlineHtml from "./widgets/InlineHtml.vue";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
@@ -110,8 +111,19 @@ const handleSubmit = async () => {
   };
 
   if (state.isNew) {
-    await backendStore.addTask(updatedTaskDetails)
-    toast.success(`Created task '${updatedTaskDetails.title}'`);
+    const savedTask = await backendStore.addTask(updatedTaskDetails)
+    toast.success({
+      component: InlineHtml,
+      props: {
+        elements: [
+          "Created task ",
+          { type: "a", href: `/tasks/${savedTask.id}/edit`, text: savedTask.title },
+        ]
+      },
+
+    }, {
+      timeout: 4000,
+    })
   } else {
     await backendStore.patchTask(state.task.id, updatedTaskDetails);
     toast.success(`Updated task '${updatedTaskDetails.title}'`);
