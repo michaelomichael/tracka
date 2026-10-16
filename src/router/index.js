@@ -3,6 +3,7 @@ import TaskListsView from '../views/TaskListsView.vue'
 import SearchTasksView from '../views/SearchTasksView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import SignupView from '../views/SignupView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
@@ -12,7 +13,9 @@ import { getCurrentUserOnceFirebaseHasLoaded } from '../services/utils'
 import ArchivedTasksView from '../views/ArchivedTasksView.vue'
 import QuickCreateTaskView from '../views/QuickCreateTaskView.vue'
 import Error404View from '../views/Error404View.vue'
+import { useLogger } from '../services/logger.js'
 
+const { log } = useLogger()
 const toast = useToast()
 
 // TODO: Why is this in the router and not main.js?
@@ -23,6 +26,7 @@ if (Capacitor.isNativePlatform()) {
   await StatusBar.show()
 }
 
+log('In index.js, creating router')
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -103,7 +107,34 @@ const router = createRouter({
   ],
 })
 
+async function handleOpenUrl(url) {
+  log('In handleOpenUrl(), url is', url, 'and route is', router.currentRoute.value.fullPath)
+
+  if (url.includes('/link/quickTask')) {
+    log('Routing to /quickTask')
+    await router.replace('/quickTask')
+  } else if (url.includes('/link/board')) {
+    log('Routing to /')
+    await router.push('/')
+  }
+
+  log('In handleOpenUrl(), after possible push, route is', router.currentRoute.value.fullPath)
+}
+
+const launchUrl = await CapacitorApp.getLaunchUrl()
+log('Result of getLaunchUrl is', JSON.stringify(launchUrl))
+if (launchUrl?.url) {
+  handleOpenUrl(launchUrl.url)
+}
+
+CapacitorApp.addListener('appUrlOpen', (event) => {
+  log('In CapacitorApp.addListener(), event is ', JSON.stringify(event))
+  handleOpenUrl(event.url)
+})
+
+// Only now that the correct starting route has been selected do we add the router.beforeEach() guard
 router.beforeEach(async (to, from, next) => {
+  log('In router.beforeEach, to is', JSON.stringify(to), 'from is', JSON.stringify(from))
   if (to.matched.some((record) => record.meta.allowUnauthorised)) {
     next()
   } else if (await getCurrentUserOnceFirebaseHasLoaded()) {

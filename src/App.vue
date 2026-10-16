@@ -68,35 +68,16 @@ onMounted(async () => {
 
   // Watch for user logout
   onAuthStateChanged(getAuth(), user => {
-    log("onAuthStateChanged", user)
+    log("onAuthStateChanged, user is ", user, "and route is", route.fullPath)
     if (!user) {
       if (!route.meta.allowUnauthorised) {
+        log("User is logged out, and route requires auth, so routing to /auth/signin")
         router.push("/auth/signin")
       }
     }
   })
 
-  function handleOpenUrl(url) {
-    if (url.includes("/link/quickTask")) {
-      log("Routing to /quickTask")
-      router.push("/quickTask")
-    } else if (url.includes("/link/board")) {
-      log("Routing to /")
-      router.push("/")
-    }
-  }
 
-  CapacitorApp.addListener("appUrlOpen", (event) => {
-    log("In CapacitorApp.addListener(), event is ", event)
-    handleOpenUrl(event.url)
-  })
-
-  CapacitorApp.getLaunchUrl().then((result) => {
-    log("In getLaunchUrl callback, result is", result)
-    if (result?.url) {
-      handleOpenUrl(result.url)
-    }
-  });
 });
 
 </script>

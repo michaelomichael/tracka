@@ -128,7 +128,7 @@ To troubleshoot the web browser on the phone, can go to here on the computer: [c
 #### Try android app on phone
 
 ```shell
-npm run build &&  npx cap run android --target-name "samsung SM-A326B" --live-reload --port 5173
+npm run build &&  npx cap run android --target-name "samsung SM-A566B" --live-reload --port 5173
 ```
 
 ### Deploy to phone
