@@ -1,19 +1,60 @@
 <script setup>
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useBackendStore } from './services/backendStore';
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import SearchBox from './components/SearchBox.vue';
 import { getAuth, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { useLogger } from './services/logger';
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import { useLocalStore } from "./services/localStore.js";
 
 const router = useRouter()
 const route = useRoute()
 const backendStore = useBackendStore()
+const localStore = useLocalStore()
 const { log } = useLogger()
 
+const timer = ref(null)
+
+const copyLocalTasksToBackend = async () => {
+  const numLocalTasks = await localStore.numTasks()
+  console.log(`Found ${numLocalTasks} to copy to backend store`)
+
+  if (numLocalTasks === 0) {
+    return
+  }
+
+  if (backendStore.isLoaded && await backendStore.isReachable()) {
+    while (true) {
+      let localTask = null
+      try {
+        console.log(`Copying...`)
+        localTask = await localStore.popTask()
+        if (!localTask) {
+          break
+        }
+
+        console.log("Copying local task to backend store:", localTask)
+        const fields = { ...localTask, listId: backendStore.newItemsList.id }
+        const newTask = await backendStore.addTask(fields)
+        console.log("Created task in backend store:", newTask)
+      } catch (e) {
+        console.error("Error copying local task to backend store:", e)
+        if (localTask != null) {
+          console.log("Pushing local task back to local store:", localTask)
+          await localStore.pushTask(localTask)
+        }
+        break
+      }
+    }
+  } else {
+    console.log("Backend store not loaded yet, so will not copy local tasks to backend store")
+  }
+}
+
 onMounted(async () => {
+  console.log("### App.onMounted() called")
   // TODO: Is this still required?
   if (Capacitor.isNativePlatform()) {
     log("Native platform, so will check if there has been a redirect to us after a successful auth")
@@ -22,6 +63,8 @@ onMounted(async () => {
   }
 
   backendStore.init()
+
+  timer.value = setInterval(copyLocalTasksToBackend, 10000)
 
   // Watch for user logout
   onAuthStateChanged(getAuth(), user => {

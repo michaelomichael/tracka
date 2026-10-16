@@ -14,6 +14,7 @@ import {
   persistentMultipleTabManager,
   orderBy,
   limit,
+  getDocFromServer,
 } from 'firebase/firestore'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
@@ -104,6 +105,34 @@ export const useBackendStore = defineStore('backendStore', () => {
   })
 
   const isLoaded = computed(() => _status.overallStatus === 'LOADING_COMPLETE')
+
+  const isReachable = async () => {
+    try {
+      function pingWithTimeout(maxWaitMillis) {
+        console.log('pingWithTimeout called')
+        return new Promise((resolve) => {
+          console.log('inside the promise')
+          setTimeout(() => {
+            console.log('Ping timeout has fired, resolving to false')
+            resolve(false)
+          }, maxWaitMillis)
+          getDocFromServer(doc(db, '_health', 'check')).then(() => {
+            console.log('In getDocFromServer callback :)')
+            resolve(true)
+          })
+        })
+      }
+
+      console.log('Starting isReachable')
+      const result = await pingWithTimeout(1000)
+      console.log('Result of pingWithTimeout:', result)
+
+      return result
+    } catch (error) {
+      console.error('Firestore server check failed:', error)
+      return false
+    }
+  }
 
   // Sync Firestore -> Pinia
   const init = () => {
@@ -922,7 +951,8 @@ export const useBackendStore = defineStore('backendStore', () => {
     _status,
     _checkDataIntegrity,
     init,
-    isLoaded,
+    isLoaded: isLoaded,
+    isReachable,
     board,
     tasks,
     lists,

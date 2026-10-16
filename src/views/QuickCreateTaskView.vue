@@ -5,10 +5,13 @@ import { useBackendStore } from "../services/backendStore";
 import { useLogger } from "../services/logger";
 import InlineHtml from "../components/widgets/InlineHtml.vue";
 import SmartForm from "../components/widgets/SmartForm.vue";
+import { useLocalStore } from "../services/localStore.js";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
-const toast = useToast();
+const localStore = useLocalStore()
+const toast = useToast()
+const TOAST_TIMEOUT_MS = 4000
 
 const form = reactive({
   title: "",
@@ -43,13 +46,16 @@ const handleSubmit = async () => {
     ? form.dueByDate
     : form.dueByDate?.toISOString()?.substring(0, 10)
 
-  if (backendStore.isLoaded) {
-    const newTask = await backendStore.addTask({
+  if (backendStore.isLoaded && await backendStore.isReachable()) {
+    console.log("Saving task to backend store")
+
+    const fields = {
       title: form.title,
       description: form.description,
       listId: backendStore.newItemsList.id,
       dueByTimestamp: form.isDueByEnabled ? `${dueByDate}T08:00:00Z` : null,
-    })
+    }
+    const newTask = await backendStore.addTask(fields)
 
     toast.success({
       component: InlineHtml,
@@ -61,12 +67,22 @@ const handleSubmit = async () => {
       },
 
     }, {
-      timeout: 4000,
+      timeout: TOAST_TIMEOUT_MS,
     })
-    resetForm()
   } else {
-    alert("TODO: Handle when backend store is not yet loaded")
+    console.log("Backend is not loaded, saving task to local store")
+    const fields = {
+      title: form.title,
+      description: form.description,
+      //listId: backendStore.newItemsList.id,
+      dueByTimestamp: form.isDueByEnabled ? `${dueByDate}T08:00:00Z` : null,
+    }
+    localStore.pushTask(fields)
+
+    toast.success(`Task '${fields.title}' will be added when network is available`, { timeout: TOAST_TIMEOUT_MS })
   }
+
+  resetForm()
 }
 
 </script>

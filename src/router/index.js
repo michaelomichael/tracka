@@ -90,6 +90,9 @@ const router = createRouter({
     {
       path: '/quickTask',
       name: 'quick-create-task',
+      meta: {
+        allowUnauthorised: true,
+      },
       component: QuickCreateTaskView,
     },
     {
