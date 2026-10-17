@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Tracka</string>
     <string name="title_activity_main">Tracka</string>
+    <string name="title_activity_quick_task">Quick Task</string>
     <string name="package_name">dev.michaelomichael.tracka</string>
     <string name="custom_url_scheme">dev.michaelomichael.tracka</string>
 

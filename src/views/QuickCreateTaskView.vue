@@ -1,17 +1,20 @@
 <script setup>
-import { reactive, watchEffect } from 'vue';
+import { onMounted, reactive, watch, watchEffect } from 'vue';
 import { useToast } from "vue-toastification";
 import { useBackendStore } from "../services/backendStore";
 import { useLogger } from "../services/logger";
 import InlineHtml from "../components/widgets/InlineHtml.vue";
 import SmartForm from "../components/widgets/SmartForm.vue";
 import { useLocalStore } from "../services/localStore.js";
+import { useRoute, useRouter } from "vue-router";
 
 const { log } = useLogger()
 const backendStore = useBackendStore()
 const localStore = useLocalStore()
 const toast = useToast()
 const TOAST_TIMEOUT_MS = 4000
+const route = useRoute()
+const router = useRouter()
 
 const form = reactive({
   title: "",
@@ -42,6 +45,7 @@ const handleCmdEnterInField = async (event) => {
 }
 
 const handleSubmit = async () => {
+  log("In handleSubmit(), form is:", JSON.stringify(form))
   const dueByDate = typeof (form.dueByDate) === "string"
     ? form.dueByDate
     : form.dueByDate?.toISOString()?.substring(0, 10)
@@ -74,7 +78,6 @@ const handleSubmit = async () => {
     const fields = {
       title: form.title,
       description: form.description,
-      //listId: backendStore.newItemsList.id,
       dueByTimestamp: form.isDueByEnabled ? `${dueByDate}T08:00:00Z` : null,
     }
     localStore.pushTask(fields)

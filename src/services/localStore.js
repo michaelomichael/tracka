@@ -23,7 +23,22 @@ export const useLocalStore = defineStore('localStore', () => {
     return task
   }
 
+  const _isValid = (newFields) =>
+    newFields != null &&
+    typeof newFields === 'object' &&
+    typeof newFields.title === 'string' &&
+    newFields.title != null &&
+    newFields.title.trim() !== ''
+
   const pushTask = async (newFields) => {
+    if (!_isValid(newFields)) {
+      try {
+        const json = JSON.stringify(newFields)
+        throw new Error('New fields provided to LocalStore.pushTask() is invalid: ' + json)
+      } catch (e) {
+        throw new Error('New fields provided to LocalStore.pushTask() is invalid')
+      }
+    }
     const tasks = _getExistingTasks()
     tasks.push(newFields)
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks))

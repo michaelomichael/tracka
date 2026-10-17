@@ -18,7 +18,7 @@ app.use(PrimeVue, {
     preset: Aura,
   },
 })
-app.use(router)
+
 app.use(Toast, {
   shareAppContext: true, // Enables it to find 'router' when passing custom Components as the toast text
   toastDefaults: {
@@ -41,6 +41,7 @@ app.use(Toast, {
     },
   },
 })
+app.use(router)
 app.use(createPinia())
 app.component('Modal', Modal)
 app.component('Button', Button)
