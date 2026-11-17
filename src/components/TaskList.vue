@@ -79,7 +79,7 @@ async function handleTaskMovedToThisList(evt) {
 }
 
 async function handleTaskOrderChanged() {
-  log(`handleTaskOrderChanged: original order=`, JSON.stringify(state.list.taskIds), " new order=", JSON.stringify(state.taskIdsSortableList));
+  log(`handleTaskOrderChanged: original order=`, state.list.taskIds, " new order=", state.taskIdsSortableList);
   await backendStore.patchList(state.list, { taskIds: state.taskIdsSortableList });
 }
 

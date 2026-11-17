@@ -134,5 +134,5 @@ npm run build &&  npx cap run android --target-name "samsung SM-A566B" --live-re
 ### Deploy to phone
 
 ```shell
-npm run build &&  npx cap run android --target-name "samsung SM-A326B"
+npm run build &&  npx cap run android --target-name "samsung SM-A566B"
 ```

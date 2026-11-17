@@ -135,11 +135,11 @@ if (Capacitor.isNativePlatform()) {
 
   const intentPlugin = registerPlugin('Intent')
   const intent = await intentPlugin.getStartIntent()
-  log('Start intent from plugin is:', JSON.stringify(intent))
+  log('Start intent from plugin is:', intent)
   await handleIntent(intent)
 
   intentPlugin.addListener('newIntentReceivedEvent', async (event) => {
-    log('newIntentReceivedEvent received:', JSON.stringify(event))
+    log('newIntentReceivedEvent received:', event)
     await handleIntent(event)
   })
 }
@@ -176,7 +176,7 @@ if (Capacitor.isNativePlatform()) {
 
 // Only now that the correct starting route has been selected do we add the router.beforeEach() guard
 router.beforeEach(async (to, from, next) => {
-  log('In router.beforeEach, to is', JSON.stringify(to), 'from is', JSON.stringify(from))
+  log('In router.beforeEach, to is', to, 'from is', from)
   if (to.matched.some((record) => record.meta.allowUnauthorised)) {
     next()
   } else if (await getCurrentUserOnceFirebaseHasLoaded()) {

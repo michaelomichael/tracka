@@ -45,7 +45,7 @@ const handleCmdEnterInField = async (event) => {
 }
 
 const handleSubmit = async () => {
-  log("In handleSubmit(), form is:", JSON.stringify(form))
+  log("In handleSubmit(), form is:", form)
   const dueByDate = typeof (form.dueByDate) === "string"
     ? form.dueByDate
     : form.dueByDate?.toISOString()?.substring(0, 10)

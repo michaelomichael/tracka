@@ -21,7 +21,7 @@ watchEffect(() => {
 })
 
 async function handleOrderChanged() {
-  log("New order is: ", JSON.stringify(state.sortableListIds))
+  log("New order is: ", state.sortableListIds)
   await backendStore.patchBoard({ listIds: state.sortableListIds })
 }
 

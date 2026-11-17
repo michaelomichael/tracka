@@ -13,7 +13,7 @@ const route = useRoute()
 const router = useRouter()
 
 watchEffect(() => {
-  log("watchEffect: route.query is", JSON.stringify(route.query))
+  log("watchEffect: route.query is", route.query)
   const title = route.query.title
   const description = route.query.description
   setTimeout(async () => await saveTaskAndReroute(title, description), 10)
